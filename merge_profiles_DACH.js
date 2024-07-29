@@ -5,6 +5,7 @@ const JSONStream = require('JSONStream');
 const { v4: uuidv4 } = require('uuid');
 const es = require('event-stream');
 const { profile } = require('console');
+const merge = require('lodash.merge');
 
 const inputFolder = './input/';
 const outputFolder = './output/';
@@ -143,7 +144,7 @@ const mergeTechnicalFields = (user1, user2) => {
 
     fields.forEach(field => {
         if (user1.data[field] && user2.data[field]) {
-            if(['regSource', 'cMarketingCode', 'brand'].includes(field)) {
+            if (['regSource', 'cMarketingCode', 'brand'].includes(field)) {
                 if (!user1.data[field].includes('|')) {
                     user1.data[field] = `|${user1.data[field]}|${user2.data[field]}`;
                 } else {
@@ -349,40 +350,33 @@ const buildProfiles = async (profile, profilesToMerge) => {
     let mergedProfile = await loadOptin(winningProfile, others);
     return [mergedProfile, winningProfile, others];
 };
+const byIsLiteAndLastUpdated = (a, b) => {
+    if (a.hasLiteAccount && b.isRegistered) {
+        return -1;
+    } else if (a.isRegistered && b.hasLiteAccount) {
+        return 1;
+    } else {
+        return new Date(a.lastUpdated) - new Date(b.lastUpdated);
+    }
+};
+const selectLastKeepingMissingValues = (acc, curr) => {
+    if (!acc) {
+        return curr;
+    } else {
+        merge(acc, curr);
+        return acc;
+    }
+};
 /**
  * @param {object[]} profilesToMerge
  */
 const mergeProfilesDACH = (profilesToMerge) => {
     let res;
-    if(profilesToMerge.some(profile => profile.isRegistered && !profile.hasLiteAccount)) {
-        res = profilesToMerge.filter(profile => profile.isRegistered && !profile.hasLiteAccount)
-                                         .reduce((winner, profile) => {
-                                            if(!winner) {
-                                                return profile;
-                                            } else {
-                                                if(new Date(winner.lastUpdated) > new Date(profile.lastUpdated)) {
-                                                    return winner;
-                                                } else { 
-                                                    return profile;
-                                                }
-                                            }
-                                          });
-} else {
-    res = profilesToMerge.reduce((winner, profile) => {
-        if(!winner) {
-            return profile;
-        } else {
-            if(new Date(winner.lastUpdated) > new Date(profile.lastUpdated)) {
-                return winner;
-            } else { 
-                return profile;
-            }
-        }
-    });
-}
-return res;
-};
+    profilesToMerge.sort(byIsLiteAndLastUpdated);
+    res = profilesToMerge.reduce(selectLastKeepingMissingValues);
 
+    return res;
+};
 
 const createNewOutputFile = (type, index) => {
     const fileName = type === 'json' ? `user-user-DE-merged_${index}.json` : `oldData_merged_profile.csv`;
@@ -492,3 +486,15 @@ module.exports = {
     readAndProcessFiles,
     mergeProfilesDACH
 };
+const keepTheMostRecent = (winner, profile) => {
+    if (!winner) {
+        return profile;
+    } else {
+        if (new Date(winner.lastUpdated) > new Date(profile.lastUpdated)) {
+            return winner;
+        } else {
+            return profile;
+        }
+    }
+};
+
