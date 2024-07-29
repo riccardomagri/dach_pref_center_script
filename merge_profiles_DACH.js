@@ -49,7 +49,7 @@ const createOptinPreference = (mostRecentConsent) => ({
     tags: mostRecentConsent?.tags || []
 });
 
-const processOptin = (profile, res, clubMapping) => {
+const processOptin = (profile, res) => {
     const preferences = profile.preferences;
     const clubKey = clubMapping[profile.data.clubId];
 
@@ -359,6 +359,8 @@ const byIsLiteAndLastUpdated = (a, b) => {
         return new Date(a.lastUpdated) - new Date(b.lastUpdated);
     }
 };
+
+
 const selectLastKeepingMissingValues = (acc, curr) => {
     if (!acc) {
         return curr;
@@ -367,13 +369,29 @@ const selectLastKeepingMissingValues = (acc, curr) => {
         return acc;
     }
 };
+const remapOptinsByClubId = profile => {
+    const optinKey = clubMapping[profile.data.clubId];
+    if (optinKey) {
+        profile.preferences[optinKey] = createOptinPreference(getMostRecentConsent(profile.preferences));
+    }
+    for (const entitlement in profile.preferences) {
+        if (entitlement !== 'terms' && entitlement !== optinKey) {
+            if (profile.preferences[entitlement].isConsentGranted) {
+                profile.preferences[optinKey].entitlements.push(entitlement);
+            }
+            delete profile.preferences[entitlement];
+        }
+    }
+    return profile;
+};
 /**
  * @param {object[]} profilesToMerge
  */
 const mergeProfilesDACH = (profilesToMerge) => {
-    let res;
-    profilesToMerge.sort(byIsLiteAndLastUpdated);
-    res = profilesToMerge.reduce(selectLastKeepingMissingValues);
+    let res = profilesToMerge.sort(byIsLiteAndLastUpdated)
+                   .map(remapOptinsByClubId)
+                   .reduce(selectLastKeepingMissingValues);
+    res.preferences.terms.TermsOfUse_v2 = res.preferences.terms.TermsOfUse;
 
     return res;
 };
