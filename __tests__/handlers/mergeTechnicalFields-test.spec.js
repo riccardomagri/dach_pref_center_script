@@ -1,5 +1,5 @@
-const { mergeProfilesDACH } = require('../merge_profiles_DACH.js');
-const { createTestProfileFull, createTestProfileLite } = require('./utility.js');
+const { mergeProfilesDACH } = require('../../merge_profiles_DACH.js');
+const { createTestProfileFull, createTestProfileLite } = require('../utility.js');
 const { expect } = require('@jest/globals');
 
 describe('DACH PREF merge technical fields', () => {

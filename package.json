@@ -30,7 +30,7 @@
   "version": "1.0.0",
   "main": "ContactLabServices.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest __tests__/handlers"
   },
   "author": "",
   "license": "ISC",

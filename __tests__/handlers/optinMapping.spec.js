@@ -1,6 +1,6 @@
-const { mergeProfilesDACH } = require('../merge_profiles_DACH.js');
+const { mergeProfilesDACH } = require('../../merge_profiles_DACH.js');
 const { expect } = require('@jest/globals');
-const { createTestProfileFull, createTestProfileLite } = require('./utility.js');
+const { createTestProfileFull, createTestProfileLite } = require('../utility.js');
 
 describe('DACH PREF optins', () => {
     test('DELOPROFIN vs DEAPTA', () => {

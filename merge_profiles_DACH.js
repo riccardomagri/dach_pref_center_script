@@ -365,7 +365,7 @@ const selectLastKeepingMissingValues = (acc, curr) => {
     if (!acc) {
         return curr;
     } else {
-        acc.data.regSource = acc.data.regSource.includes(curr.data.regSource) ? acc.data.regSource : `${acc.data.regSource}|${curr.data.regSource}`;
+        /*acc.data.regSource = acc.data.regSource.includes(curr.data.regSource) ? acc.data.regSource : `${acc.data.regSource}|${curr.data.regSource}`;
         acc.data.cMarketingCode = acc.data.cMarketingCode.includes(curr.data.cMarketingCode) ? acc.data.cMarketingCode : `${acc.data.cMarketingCode}|${curr.data.cMarketingCode}`;
         acc.data.brand = acc.data.brand.includes(curr.data.brand) ? acc.data.brand : `${acc.data.brand}|${curr.data.brand}`;
         acc.data.typeOfMember = valuesPriority.indexOf(acc.data.typeOfMember) < valuesPriority.indexOf(curr.data.typeOfMember) ? acc.data.typeOfMember : curr.data.typeOfMember;
@@ -373,7 +373,7 @@ const selectLastKeepingMissingValues = (acc, curr) => {
         acc.data.preferredLanguage = acc.data.preferredLanguage !== undefined ? acc.data.preferredLanguage : curr.data.preferredLanguage;
         acc.data.division = "SN";
         acc.data.region = "EMEA";
-        acc.data.countryDivision = "DE";
+        acc.data.countryDivision = "DE";*/
         return merge({}, acc, curr);
     }
 };
