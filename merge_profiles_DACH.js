@@ -350,7 +350,7 @@ const buildProfiles = async (profile, profilesToMerge) => {
     let mergedProfile = await loadOptin(winningProfile, others);
     return [mergedProfile, winningProfile, others];
 };
-const byIsLiteAndLastUpdated = (a, b) => {
+const byIsLiteAndByLastUpdated = (a, b) => {
     if (a.hasLiteAccount && b.isRegistered) {
         return -1;
     } else if (a.isRegistered && b.hasLiteAccount) {
@@ -360,41 +360,45 @@ const byIsLiteAndLastUpdated = (a, b) => {
     }
 };
 
-const selectLastKeepingMissingValues = () => {
-    const typeOfMemberPriority = new Map();
+const toOneApplyingMergeRules = () => {
+    const typeOfMemberRegistry = new Map();
     return (acc, curr) => {
         if (curr.data.typeOfMember !== undefined) {
-            typeOfMemberPriority.set(curr.data.clubId, curr.data.typeOfMember);
+            typeOfMemberRegistry.set(curr.data.clubId, curr.data.typeOfMember);
         }
         if (JSON.stringify(acc) === "{}") {
             return curr;
         }
 
         curr.data ??= {};
-        curr.data.regSource &&= acc.data.regSource.includes(curr.data.regSource) ? acc.data.regSource : `${acc.data.regSource}|${curr.data.regSource}`;
-        curr.data.cMarketingCode &&= acc.data.cMarketingCode.includes(curr.data.cMarketingCode) ? acc.data.cMarketingCode : `${acc.data.cMarketingCode}|${curr.data.cMarketingCode}`;
-        curr.data.brand &&= acc.data.brand.includes(curr.data.brand) ? acc.data.brand : `${acc.data.brand}|${curr.data.brand}`;
+        curr.data.regSource &&= concatFieldRule(acc.data, curr.data, 'regSource');
+        curr.data.cMarketingCode &&= concatFieldRule(acc.data, curr.data, 'cMarketingCode');
+        curr.data.brand &&= concatFieldRule(acc.data, curr.data, 'brand');
         curr.data.division = "SN";
         curr.data.region = "EMEA";
         curr.data.countryDivision = "DE";
-        curr.data.typeOfMember = resolveTypeOfMember(typeOfMemberPriority);
+        curr.data.typeOfMember = typeOfMemberRule(typeOfMemberRegistry);
         return merge({}, acc, curr);
     }
 };
 
-const resolveTypeOfMember = (typeOfMemberPriority) => {
-    if (typeOfMemberPriority.has("DE NUTRICIA")) {
-        return typeOfMemberPriority.get("DE NUTRICIA");
-    } else if (typeOfMemberPriority.has("DE LOPROFIN")) {
-        return typeOfMemberPriority.get("DE LOPROFIN");
-    } else if (typeOfMemberPriority.has("DE APTA")) {
-        return typeOfMemberPriority.get("DE APTA");
-    } else if (typeOfMemberPriority.has("DE MILUPA")) {
-        return typeOfMemberPriority.get("DE MILUPA");
+const concatFieldRule = (accData, currData, field) => {
+   return accData[field].includes(currData[field]) ? accData[field] : `${accData[field]}|${currData[field]}`
+} 
+
+const typeOfMemberRule = (registry) => {
+    if (registry.has("DE NUTRICIA")) {
+        return registry.get("DE NUTRICIA");
+    } else if (registry.has("DE LOPROFIN")) {
+        return registry.get("DE LOPROFIN");
+    } else if (registry.has("DE APTA")) {
+        return registry.get("DE APTA");
+    } else if (registry.has("DE MILUPA")) {
+        return registry.get("DE MILUPA");
     }
 }
 
-const remapOptinsByClubId = profile => {
+const optinsToEntitlementsOfDomainOptins = profile => {
     const optinKey = clubMapping[profile.data.clubId];
     if (optinKey) {
         profile.preferences[optinKey] = createOptinPreference(getMostRecentConsent(profile.preferences));
@@ -413,9 +417,10 @@ const remapOptinsByClubId = profile => {
  * @param {object[]} profilesToMerge
  */
 const mergeProfilesDACH = (profilesToMerge) => {
-    let res = profilesToMerge.sort(byIsLiteAndLastUpdated)
-        .map(remapOptinsByClubId)
-        .reduce(selectLastKeepingMissingValues(), {});
+    let res = profilesToMerge
+        .sort(byIsLiteAndByLastUpdated)
+        .map(optinsToEntitlementsOfDomainOptins)
+        .reduce(toOneApplyingMergeRules(), {});
     res.preferences.terms !== undefined ? res.preferences.terms.TermsOfUse_v2 = res?.preferences?.terms?.TermsOfUse : null;
 
     return res;
