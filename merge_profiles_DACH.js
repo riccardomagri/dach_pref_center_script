@@ -369,15 +369,6 @@ const selectLastKeepingMissingValues = () => {
         if (JSON.stringify(acc) === "{}") {
             return curr;
         }
-        if (typeOfMemberPriority.has("DE NUTRICIA")) {
-            curr.data.typeOfMember = typeOfMemberPriority.get("DE NUTRICIA");
-        } else if (typeOfMemberPriority.has("DE LOPROFIN")) {
-            curr.data.typeOfMember = typeOfMemberPriority.get("DE LOPROFIN");
-        } else if (typeOfMemberPriority.has("DE APTA")) {
-            curr.data.typeOfMember = typeOfMemberPriority.get("DE APTA");
-        } else if (typeOfMemberPriority.has("DE MILUPA")) {
-            curr.data.typeOfMember = typeOfMemberPriority.get("DE MILUPA");
-        }
 
         curr.data ??= {};
         curr.data.regSource &&= acc.data.regSource.includes(curr.data.regSource) ? acc.data.regSource : `${acc.data.regSource}|${curr.data.regSource}`;
@@ -386,9 +377,22 @@ const selectLastKeepingMissingValues = () => {
         curr.data.division = "SN";
         curr.data.region = "EMEA";
         curr.data.countryDivision = "DE";
+        curr.data.typeOfMember = resolveTypeOfMember(typeOfMemberPriority);
         return merge({}, acc, curr);
     }
 };
+
+const resolveTypeOfMember = (typeOfMemberPriority) => {
+    if (typeOfMemberPriority.has("DE NUTRICIA")) {
+        return typeOfMemberPriority.get("DE NUTRICIA");
+    } else if (typeOfMemberPriority.has("DE LOPROFIN")) {
+        return typeOfMemberPriority.get("DE LOPROFIN");
+    } else if (typeOfMemberPriority.has("DE APTA")) {
+        return typeOfMemberPriority.get("DE APTA");
+    } else if (typeOfMemberPriority.has("DE MILUPA")) {
+        return typeOfMemberPriority.get("DE MILUPA");
+    }
+}
 
 const remapOptinsByClubId = profile => {
     const optinKey = clubMapping[profile.data.clubId];
