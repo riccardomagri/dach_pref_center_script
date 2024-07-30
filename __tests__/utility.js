@@ -20,7 +20,7 @@ const createTestProfile = (overrides = {}) => {
         preferredLanguage: 'de_de',
         created: new Date().toISOString()
     },
-    preferences: {},
+    preferences: {'terms' : {'TermsOfUse': {'isConsentGranted': true}}},
     isRegistered: false,
     hasLiteAccount: false,
     lastUpdated: new Date().toISOString()

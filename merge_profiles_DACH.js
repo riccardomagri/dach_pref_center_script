@@ -365,8 +365,7 @@ const selectLastKeepingMissingValues = (acc, curr) => {
     if (!acc) {
         return curr;
     } else {
-        merge(acc, curr);
-        return acc;
+        return merge({}, acc, curr);
     }
 };
 const remapOptinsByClubId = profile => {
