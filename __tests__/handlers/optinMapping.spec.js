@@ -216,4 +216,40 @@ describe('DACH PREF optins', () => {
                 }
         }));
     });
+    test('DELOPROFIN with more than one optins with different lastConsentModified', () => {
+        const DELOPROFIN = createTestProfileFull({
+            data: {
+                clubId: 'DE LOPROFIN'
+            },
+            preferences: {
+                terms: {
+                    TermsOfUse: {
+                        isConsentGranted: true,
+                        entitlements: [],
+                        lastConsentModified: "2021-01-01T00:00:00.000Z"
+                    }
+                },
+                optinProgramMarketing4: {
+                    isConsentGranted: true,
+                    entitlements: [],
+                    lastConsentModified: "2021-03-01T00:00:00.000Z"
+                },
+                optinPostal: {
+                    isConsentGranted: true,
+                    entitlements: [],
+                    lastConsentModified: "2021-04-01T00:00:00.000Z"
+                },
+            }
+        });
+        const result = mergeProfilesDACH([DELOPROFIN]);
+        expect(result).toEqual(expect.objectContaining({
+            preferences: {
+                    terms: expect.objectContaining({ 
+                        TermsOfUse: expect.objectContaining({ isConsentGranted: true }), 
+                        TermsOfUse_v2: expect.objectContaining({ isConsentGranted: true }) 
+                    }),
+                    optinLoprofin: expect.objectContaining({ isConsentGranted: true, entitlements: ["optinProgramMarketing4", "optinPostal"], lastConsentModified: "2021-04-01T00:00:00.000Z" }),
+                }
+        }));
+    });
 });

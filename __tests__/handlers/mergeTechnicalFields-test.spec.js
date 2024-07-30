@@ -6,28 +6,106 @@ describe('DACH PREF merge technical fields', () => {
     test('Profile1 FULL vs Profile2 LITE', () => {
         const Profile1 = createTestProfileFull({
             data: {
-                regSource: 'OFFLINE',
-                clubId: 'DE LOPROFIN',
-                cMarketingCode: 'standard',
-                typeOfMember: 'Patient',
-                brand: 'Loprofin',
+                division: 'Pluto',
+                region: 'Topolino',
+                countryDivision: 'Disney',
+            },
+            lastUpdated: '2021-02-01T00:00:00.000Z'
+        });
+        const Profile2 = createTestProfileLite({
+            data: {
+                division: 'Pippo',
+                region: 'Paperino',
+                countryDivision: 'Paperopoli',
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
                 division: 'SN',
                 region: 'EMEA',
                 countryDivision: 'DE',
-                preferredLanguage: 'de_de',
+            }),
+            isRegistered: true,
+            lastUpdated: '2021-02-01T00:00:00.000Z'
+        }));
+    });
+    test('Concatenation of technical fields', () => {
+        const Profile1 = createTestProfileFull({
+            data: {
+                regSource: 'OFFLINE',
+                cMarketingCode: 'WelcomePackage',
+                brand: 'Loprofin',
             },
             lastUpdated: '2021-02-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileLite({
             data: {
                 regSource: 'Website',
-                clubId: 'DE APTA',
-                cMarketingCode: 'DoNotContact',
-                typeOfMember: 'HCP',
-                brand: 'Aptamil',
-                division: 'SN',
-                region: 'EMEA',
-                countryDivision: 'DE',
+                cMarketingCode: 'standard',
+                brand: "Aptamil"
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
+                regSource: 'Website|OFFLINE',
+                cMarketingCode: 'standard|WelcomePackage',
+                brand: "Aptamil|Loprofin"
+            }),
+            lastUpdated: '2021-02-01T00:00:00.000Z'
+        }));
+    });
+    test('Concatenation of technical fields with 3 profiles', () => {
+        const Profile1 = createTestProfileFull({
+            data: {
+                regSource: 'OFFLINE',
+                cMarketingCode: 'WelcomePackage',
+                brand: 'Loprofin',
+            },
+            lastUpdated: '2021-02-01T00:00:00.000Z'
+        });
+        const Profile2 = createTestProfileLite({
+            data: {
+                regSource: 'Website',
+                cMarketingCode: 'standard',
+                brand: "Aptamil"
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const Profile3 = createTestProfileLite({
+            data: {
+                regSource: 'Phone',
+                cMarketingCode: 'Migrated',
+                brand: "Milupa"
+            },
+            lastUpdated: '2021-03-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2, Profile3]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
+                regSource: 'Website|Phone|OFFLINE',
+                cMarketingCode: 'standard|Migrated|WelcomePackage',
+                brand: "Aptamil|Milupa|Loprofin"
+            })
+        }));
+    });
+    test('Concatenation of same technical fields with 2 profiles', () => {
+        const Profile1 = createTestProfileFull({
+            data: {
+                regSource: 'OFFLINE',
+                cMarketingCode: 'WelcomePackage',
+                brand: 'Loprofin',
+            },
+            lastUpdated: '2021-02-01T00:00:00.000Z'
+        });
+        const Profile2 = createTestProfileLite({
+            data: {
+                regSource: 'OFFLINE',
+                cMarketingCode: 'WelcomePackage',
+                brand: 'Loprofin'
             },
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
@@ -35,17 +113,48 @@ describe('DACH PREF merge technical fields', () => {
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
                 regSource: 'OFFLINE',
-                clubId: 'DE LOPROFIN',
-                cMarketingCode: 'standard|DoNotContact',
-                typeOfMember: 'Patient',
-                brand: 'Loprofin|Aptamil',
-                division: 'SN',
-                region: 'EMEA',
-                countryDivision: 'DE',
-                preferredLanguage: 'de_de',
-            }),
-            isRegistered: true,
+                cMarketingCode: 'WelcomePackage',
+                brand: 'Loprofin'
+            })
+        }));
+    });
+    test('Profile 1 with missing technical fields vs Profile 2 with filled technical fields', () => {
+        const Profile1 = createTestProfileFull({
+            data: {},
             lastUpdated: '2021-02-01T00:00:00.000Z'
+        });
+        const Profile2 = createTestProfileLite({
+            data: {
+                regSource: 'OFFLINE',
+                cMarketingCode: 'WelcomePackage',
+                brand: 'Loprofin'
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
+                regSource: 'OFFLINE',
+                cMarketingCode: 'WelcomePackage',
+                brand: 'Loprofin'
+            })
+        }));
+    });
+    test('Profile 1 with missing technical fields vs Profile 2 with missing technical fields', () => {
+        const Profile1 = createTestProfileFull({
+            data: {},
+            lastUpdated: '2021-02-01T00:00:00.000Z'
+        });
+        const Profile2 = createTestProfileLite({
+            data: {},
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.not.objectContaining({
+                regSource : expect.anything(), 
+                cMarketingCode : expect.anything(),
+                brand : expect.anything()}),
         }));
     });
 });
