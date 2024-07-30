@@ -167,7 +167,7 @@ describe('DACH PREF merge technical fields', () => {
         });
         const Profile2 = createTestProfileFull({
             data: {
-                clubId: 'DELOPROFIN',
+                clubId: 'DE LOPROFIN',
                 typeOfMember: 'HCPatient'
             },
             lastUpdated: '2021-01-01T00:00:00.000Z'
@@ -198,6 +198,95 @@ describe('DACH PREF merge technical fields', () => {
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
                 typeOfMember: 'Consumer'
+            })
+        }));
+    });
+    test('Test typeOfMember field with 2 profiles DENUTRICIA vs DEAPTA', () => {
+        const Profile1 = createTestProfileFull({
+            data: {
+                clubId: 'DE NUTRICIA',
+                typeOfMember: 'HCCarer'
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const Profile2 = createTestProfileFull({
+            data: {
+                clubId: 'DE APTA',
+                typeOfMember: 'Consumer'
+            },
+            lastUpdated: '2021-02-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
+                typeOfMember: 'HCCarer'
+            })
+        }));
+    });
+    test('Test typeOfMember field with 2 profiles DENUTRICIA vs DEMILUPA', () => {
+        const Profile1 = createTestProfileFull({
+            data: {
+                clubId: 'DE NUTRICIA',
+                typeOfMember: 'HCCarer'
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const Profile2 = createTestProfileFull({
+            data: {
+                clubId: 'DE MILUPA',
+                typeOfMember: 'Consumer'
+            },
+            lastUpdated: '2021-02-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
+                typeOfMember: 'HCCarer'
+            })
+        }));
+    });
+    test('Test typeOfMember field with 2 profiles DELOPROFIN vs DEAPTA', () => {
+        const Profile1 = createTestProfileFull({
+            data: {
+                clubId: 'DE APTA',
+                typeOfMember: 'Consumer'
+            },
+            lastUpdated: '2021-02-01T01:00:00.000Z'
+        });
+        const Profile2 = createTestProfileFull({
+            data: {
+                clubId: 'DE LOPROFIN',
+                typeOfMember: 'HCPatient'
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
+                typeOfMember: 'HCPatient'
+            })
+        }));
+    });
+
+    test('Test typeOfMember field with 2 profiles DELOPROFIN vs DEMILUPA', () => {
+        const Profile1 = createTestProfileFull({
+            data: {
+                clubId: 'DE MILUPA',
+                typeOfMember: 'Consumer'
+            },
+            lastUpdated: '2021-02-01T01:00:00.000Z'
+        });
+        const Profile2 = createTestProfileFull({
+            data: {
+                clubId: 'DE LOPROFIN',
+                typeOfMember: 'HCPatient'
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
+                typeOfMember: 'HCPatient'
             })
         }));
     });
