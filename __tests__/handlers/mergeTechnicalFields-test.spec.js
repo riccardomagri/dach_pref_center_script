@@ -157,4 +157,48 @@ describe('DACH PREF merge technical fields', () => {
                 brand : expect.anything()}),
         }));
     });
+    test('Test typeOfMember field with 2 profiles DENUTRICIA vs DELOPROFIN', () => {
+        const Profile1 = createTestProfileFull({
+            data: {
+                clubId: 'DE NUTRICIA',
+                typeOfMember: 'HCP'
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const Profile2 = createTestProfileFull({
+            data: {
+                clubId: 'DELOPROFIN',
+                typeOfMember: 'HCPatient'
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
+                typeOfMember: 'HCP'
+            })
+        }));
+    });
+    test('Test typeOfMember field with 2 profiles DENUTRICIA (consumer) vs DELOPROFIN', () => {
+        const Profile1 = createTestProfileFull({
+            data: {
+                clubId: 'DE NUTRICIA',
+                typeOfMember: 'Consumer'
+            },
+            lastUpdated: '2021-01-01T01:00:00.000Z'
+        });
+        const Profile2 = createTestProfileFull({
+            data: {
+                clubId: 'DE LOPROFIN',
+                typeOfMember: 'HCPatient'
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
+                typeOfMember: 'Consumer'
+            })
+        }));
+    });
 });

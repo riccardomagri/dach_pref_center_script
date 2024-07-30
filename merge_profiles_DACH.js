@@ -360,35 +360,51 @@ const byIsLiteAndLastUpdated = (a, b) => {
     }
 };
 
-
-const selectLastKeepingMissingValues = (acc, curr) => {
-    if (!acc) {
-        return curr;
-    } else {
-        /*acc.data.regSource = acc.data.regSource.includes(curr.data.regSource) ? acc.data.regSource : `${acc.data.regSource}|${curr.data.regSource}`;
-        acc.data.cMarketingCode = acc.data.cMarketingCode.includes(curr.data.cMarketingCode) ? acc.data.cMarketingCode : `${acc.data.cMarketingCode}|${curr.data.cMarketingCode}`;
-        acc.data.brand = acc.data.brand.includes(curr.data.brand) ? acc.data.brand : `${acc.data.brand}|${curr.data.brand}`;
-        acc.data.typeOfMember = valuesPriority.indexOf(acc.data.typeOfMember) < valuesPriority.indexOf(curr.data.typeOfMember) ? acc.data.typeOfMember : curr.data.typeOfMember;
-        acc.data.clubId = acc.created < curr.created ? acc.data.clubId : curr.data.clubId;
-        acc.data.preferredLanguage = acc.data.preferredLanguage !== undefined ? acc.data.preferredLanguage : curr.data.preferredLanguage;*/
-        if(curr?.data === undefined){
-            curr.data = {};
+const selectLastKeepingMissingValues = () => {
+    const typeOfMemberPriority = new Map();
+    return (acc, curr) => {
+        if (!acc) {
+            return curr;
+        } else {
+            if(curr.data.typeOfMember !== undefined){
+            typeOfMemberPriority.set(curr.data.clubId, curr.data.typeOfMember);
+            }
+            if(typeOfMemberPriority.has("DE NUTRICIA")){
+                curr.data.typeOfMember = typeOfMemberPriority.get("DE NUTRICIA");
+            } else if(typeOfMemberPriority.has("DE LOPROFIN")){
+                curr.data.typeOfMember = typeOfMemberPriority.get("DE LOPROFIN");
+            } else if(typeOfMemberPriority.has("DE APTA")){
+                curr.data.typeOfMember = typeOfMemberPriority.get("DE APTA");
+            } else if(typeOfMemberPriority.has("DE MILUPA")){
+                curr.data.typeOfMember = typeOfMemberPriority.get("DE MILUPA");
+            }
+            /*acc.data.regSource = acc.data.regSource.includes(curr.data.regSource) ? acc.data.regSource : `${acc.data.regSource}|${curr.data.regSource}`;
+            acc.data.cMarketingCode = acc.data.cMarketingCode.includes(curr.data.cMarketingCode) ? acc.data.cMarketingCode : `${acc.data.cMarketingCode}|${curr.data.cMarketingCode}`;
+            acc.data.brand = acc.data.brand.includes(curr.data.brand) ? acc.data.brand : `${acc.data.brand}|${curr.data.brand}`;
+            acc.data.typeOfMember = valuesPriority.indexOf(acc.data.typeOfMember) < valuesPriority.indexOf(curr.data.typeOfMember) ? acc.data.typeOfMember : curr.data.typeOfMember;
+            acc.data.clubId = acc.created < curr.created ? acc.data.clubId : curr.data.clubId;
+            acc.data.preferredLanguage = acc.data.preferredLanguage !== undefined ? acc.data.preferredLanguage : curr.data.preferredLanguage;*/
+            if(curr?.data === undefined){
+                curr.data = {};
+            }
+            if(curr?.data?.regSource !== undefined){
+            curr.data.regSource = acc.data.regSource.includes(curr.data.regSource) ? acc.data.regSource : `${acc.data.regSource}|${curr.data.regSource}`;
+            }
+            if(curr?.data?.cMarketingCode !== undefined){
+            curr.data.cMarketingCode = acc.data.cMarketingCode.includes(curr.data.cMarketingCode) ? acc.data.cMarketingCode : `${acc.data.cMarketingCode}|${curr.data.cMarketingCode}`;
+            }
+            if(curr?.data?.brand !== undefined){
+            curr.data.brand = acc.data.brand.includes(curr.data.brand) ? acc.data.brand : `${acc.data.brand}|${curr.data.brand}`;
+           }
+    
+            curr.data.division = "SN";
+            curr.data.region = "EMEA";
+            curr.data.countryDivision = "DE";
+            return merge({}, acc, curr);
         }
-        if(curr?.data?.regSource !== undefined){
-        curr.data.regSource = acc.data.regSource.includes(curr.data.regSource) ? acc.data.regSource : `${acc.data.regSource}|${curr.data.regSource}`;
-        }
-        if(curr?.data?.cMarketingCode !== undefined){
-        curr.data.cMarketingCode = acc.data.cMarketingCode.includes(curr.data.cMarketingCode) ? acc.data.cMarketingCode : `${acc.data.cMarketingCode}|${curr.data.cMarketingCode}`;
-        }
-        if(curr?.data?.brand !== undefined){
-        curr.data.brand = acc.data.brand.includes(curr.data.brand) ? acc.data.brand : `${acc.data.brand}|${curr.data.brand}`;
-        }
-        curr.data.division = "SN";
-        curr.data.region = "EMEA";
-        curr.data.countryDivision = "DE";
-        return merge({}, acc, curr);
     }
 };
+
 const remapOptinsByClubId = profile => {
     const optinKey = clubMapping[profile.data.clubId];
     if (optinKey) {
@@ -410,7 +426,7 @@ const remapOptinsByClubId = profile => {
 const mergeProfilesDACH = (profilesToMerge) => {
     let res = profilesToMerge.sort(byIsLiteAndLastUpdated)
                    .map(remapOptinsByClubId)
-                   .reduce(selectLastKeepingMissingValues);
+                   .reduce(selectLastKeepingMissingValues(), {});
     res.preferences.terms !== undefined ? res.preferences.terms.TermsOfUse_v2 = res?.preferences?.terms?.TermsOfUse : null;
 
 
