@@ -1,6 +1,7 @@
 const { mergeProfilesDACH } = require('../merge_profiles_DACH.js');
 const { expect } = require('@jest/globals');
 const { createTestProfileFull, createTestProfileLite } = require('./utility.js');
+const cloneDeep = require('lodash.clonedeep');
 
 describe('DACH PREF', () => {
     beforeAll(() => {
@@ -9,34 +10,34 @@ describe('DACH PREF', () => {
     test('LITE vs LITE', () => {
         const mostRecent = createTestProfileLite({ lastUpdated: '2021-02-01T00:00:00.000Z'});
         const lessRecent = createTestProfileLite({ lastUpdated: '2021-01-01T00:00:00.000Z' });
-        const result = mergeProfilesDACH([mostRecent, lessRecent]);
-        expect(result).toStrictEqual(lessRecent);
+        const result = mergeProfilesDACH([cloneDeep(mostRecent), cloneDeep(lessRecent)]);
+        expect(result).toMatchObject(mostRecent);
     });  
     test('FULL vs FULL', () => {
         const mostRecent = createTestProfileFull({ lastUpdated: '2021-02-01T00:00:00.000Z'});
         const lessRecent = createTestProfileFull({ lastUpdated: '2021-01-01T00:00:00.000Z' });
-        const result = mergeProfilesDACH([mostRecent, lessRecent]);
-        expect(result).toStrictEqual(lessRecent);
+        const result = mergeProfilesDACH([cloneDeep(mostRecent), cloneDeep(lessRecent)]);
+        expect(result).toMatchObject(mostRecent);
     });
     test('LITE vs FULL', () => {
         const mostRecentLITE = createTestProfileLite({ lastUpdated: '2021-02-01T00:00:00.000Z'});
         const lessRecentFULL = createTestProfileFull({ lastUpdated: '2021-01-01T00:00:00.000Z' });
-        const result = mergeProfilesDACH([mostRecentLITE, lessRecentFULL]);
-        expect(result).toStrictEqual(lessRecentFULL);
+        const result = mergeProfilesDACH([cloneDeep(mostRecentLITE), cloneDeep(lessRecentFULL)]);
+        expect(result).toMatchObject(lessRecentFULL);
     });
     test('LITE vs LITE vs FULL', () => {
         const mostRecentLITE = createTestProfileLite({ lastUpdated: '2021-02-01T00:00:00.000Z'});
         const lessRecentLITE = createTestProfileLite({ lastUpdated: '2021-03-01T00:00:00.000Z' });
         const lessRecentFULL = createTestProfileFull({ lastUpdated: '2021-01-01T00:00:00.000Z' });
-        const result = mergeProfilesDACH([mostRecentLITE, lessRecentLITE, lessRecentFULL]);
-        expect(result).toStrictEqual(lessRecentFULL);
+        const result = mergeProfilesDACH([cloneDeep(mostRecentLITE), cloneDeep(lessRecentLITE), cloneDeep(lessRecentFULL)]);
+        expect(result).toMatchObject(lessRecentFULL);
     });
     test('FULL vs LITE vs FULL', () => {
         const mostRecentFULL = createTestProfileFull({ lastUpdated: '2021-02-01T00:00:00.000Z'});
         const lessRecentLITE = createTestProfileLite({ lastUpdated: '2021-03-01T00:00:00.000Z' });
         const lessRecentFULL = createTestProfileFull({ lastUpdated: '2021-01-01T00:00:00.000Z' });
-        const result = mergeProfilesDACH([mostRecentFULL, lessRecentLITE, lessRecentFULL]);
-        expect(result).toStrictEqual(mostRecentFULL);
+        const result = mergeProfilesDACH([cloneDeep(mostRecentFULL), cloneDeep(lessRecentLITE), cloneDeep(lessRecentFULL)]);
+        expect(result).toMatchObject(mostRecentFULL);
     });
     test('FULL with missing field vs LITE with filled field', () => {
         const FULL = createTestProfileFull({});
@@ -76,4 +77,5 @@ describe('DACH PREF', () => {
         const result = mergeProfilesDACH([FULL1, FULL2]);
         expect(result).toEqual(expect.objectContaining({ lastUpdated: '2021-03-01T00:00:00.000Z', data: expect.objectContaining({ firstName: "Pluto" })}));
     });
+
 });

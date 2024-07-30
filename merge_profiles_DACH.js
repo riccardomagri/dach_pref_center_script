@@ -371,11 +371,10 @@ const selectLastKeepingMissingValues = (acc, curr) => {
         acc.data.typeOfMember = valuesPriority.indexOf(acc.data.typeOfMember) < valuesPriority.indexOf(curr.data.typeOfMember) ? acc.data.typeOfMember : curr.data.typeOfMember;
         acc.data.clubId = acc.created < curr.created ? acc.data.clubId : curr.data.clubId;
         acc.data.preferredLanguage = acc.data.preferredLanguage !== undefined ? acc.data.preferredLanguage : curr.data.preferredLanguage;
-        merge(acc, curr);
         acc.data.division = "SN";
         acc.data.region = "EMEA";
         acc.data.countryDivision = "DE";
-        return acc;
+        return merge({}, acc, curr);
     }
 };
 const remapOptinsByClubId = profile => {
