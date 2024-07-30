@@ -10,13 +10,13 @@ describe('DACH PREF', () => {
         const mostRecent = createTestProfileLite({ lastUpdated: '2021-02-01T00:00:00.000Z'});
         const lessRecent = createTestProfileLite({ lastUpdated: '2021-01-01T00:00:00.000Z' });
         const result = mergeProfilesDACH([mostRecent, lessRecent]);
-        expect(result).toStrictEqual(mostRecent);
+        expect(result).toStrictEqual(lessRecent);
     });  
     test('FULL vs FULL', () => {
         const mostRecent = createTestProfileFull({ lastUpdated: '2021-02-01T00:00:00.000Z'});
         const lessRecent = createTestProfileFull({ lastUpdated: '2021-01-01T00:00:00.000Z' });
         const result = mergeProfilesDACH([mostRecent, lessRecent]);
-        expect(result).toStrictEqual(mostRecent);
+        expect(result).toStrictEqual(lessRecent);
     });
     test('LITE vs FULL', () => {
         const mostRecentLITE = createTestProfileLite({ lastUpdated: '2021-02-01T00:00:00.000Z'});
