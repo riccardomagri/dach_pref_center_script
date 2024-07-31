@@ -54,7 +54,7 @@ const writeToFile = async (outputCsvStreamWriter, mergedJsonStreamWriter, merged
     outputCsvStreamWriter.write({
         old_UID: mergedProfile?.UID,
         old_clubId: mergedProfile?.data?.clubId,
-        new_UID: res?.UID,
+        new_UID: mergedProfile?.UID,
         new_clubId: mergedProfile?.data?.clubId,
         email: mergedProfile?.profile?.email.toLowerCase()
     });
