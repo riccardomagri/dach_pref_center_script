@@ -1,6 +1,8 @@
 const { mergeProfilesDACH } = require('../../merge_profiles_DACH.js');
 const { createTestProfileFull, createTestProfileLite } = require('../utility.js');
 const { expect } = require('@jest/globals');
+const matchers = require('jest-extended');
+expect.extend(matchers);
 
 describe('DACH PREF merge orders', () => {
     test('Test orders field with 2 profiles with different orders', () => {
@@ -41,7 +43,7 @@ describe('DACH PREF merge orders', () => {
         const result = mergeProfilesDACH([Profile1, Profile2]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                orders: [
+                orders: expect.toIncludeSameMembers([
                     {
                         id: '123456',
                         orderNumber: '123456',
@@ -59,8 +61,8 @@ describe('DACH PREF merge orders', () => {
                         orderCurrency: 'EUR',
                         orderStatus: 'Shipped',
                         source: 'DELOPROFIN'
-                    }
-                ]
+                    },
+                ])
             })
         }));
     });

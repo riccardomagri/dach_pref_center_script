@@ -124,62 +124,7 @@ const writeToFile = async (oldDataStream, mergedStream, winner, others, res) => 
     }
 };
 
-// mergeTechnicalFields è una funzione che prende due profili e restituisce un profilo combinato
-// I campi tecnici vengono combinati in base alla data di aggiornamento
-// Alcuni campi vengono combinati in base alla priorità
-// Altri vengono concatenati con un pipe se non sono già presenti
-const mergeTechnicalFields = (user1, user2) => {
-    const fields = [
-        'regSource',
-        'cMarketingCode',
-        'typeOfMember',
-        'clubId',
-        'brand',
-        'division',
-        'region',
-        'countryDivision',
-        'lastSystemUpdatedProfile',
-        'preferredLanguage'
-    ];
 
-    fields.forEach(field => {
-        if (user1.data[field] && user2.data[field]) {
-            if (['regSource', 'cMarketingCode', 'brand'].includes(field)) {
-                if (!user1.data[field].includes('|')) {
-                    user1.data[field] = `|${user1.data[field]}|${user2.data[field]}`;
-                } else {
-                    user1.data[field] = `${user1.data[field]}|${user2.data[field]}`;
-                }
-            } else if (field === 'typeOfMember') {
-                const valuesPriority = ['HCP', 'Carer', 'Patient', 'Consumer'];
-                const user1Index = valuesPriority.indexOf(user1.data[field]);
-                const user2Index = valuesPriority.indexOf(user2.data[field]);
-                user1.data[field] = user1Index < user2Index ? user1.data[field] : user2.data[field];
-            } else {
-                user1.data[field] = new Date(user1.lastUpdated) > new Date(user2.lastUpdated) ? user1.data[field] : user2.data[field];
-            }
-        } else {
-            user1.data[field] = user1.data[field] || user2.data[field];
-        }
-    });
-
-    // Imposta valori fissi per division, region, e countryDivision
-    user1.data.division = "SN";
-    user1.data.region = "EMEA";
-    user1.data.countryDivision = "DE";
-
-    // Aggiorna lastUpdated se necessario
-    if (new Date(user1.lastUpdated) < new Date(user2.lastUpdated)) {
-        user1.lastUpdated = user2.lastUpdated;
-    }
-
-    // Aggiorna clubId se necessario
-    if (new Date(user1.created) > new Date(user2.created)) {
-        user1.data.clubId = user2.data.clubId;
-    }
-
-    return user1;
-};
 
 // mergeChildren è una funzione che prende due profili e restituisce un array di figli combinati
 // I figli vengono combinati in base alla data di nascita o alla data di parto
@@ -229,44 +174,22 @@ const mergeChildren = (accDataChildren, currDataChildren) => {
 
 // mergeAddresses è una funzione che prende due profili e restituisce un array di indirizzi combinati
 const mergeAddresses = (accDataAddresses, currDataAddresses) => {
-    let mergedAddresses = [];
-
-    let addressMap = {};
-    const addOrUpdateOrder = (address) => {
-        if (addressMap[address.id]) {
-            addressMap[address.id] = { ...addressMap[address.id], ...address };
-        } else {
-            addressMap[address.id] = { ...address };
-        }
-    };
-
-    accDataAddresses.data.addresses.forEach(address => addOrUpdateOrder(address));
-    currDataAddresses.data.addresses.forEach(address => addOrUpdateOrder(address));
-
-    mergedAddresses = Object.values(addressMap);
+    let mergedAddresses = [...accDataAddresses.data.addresses, ...currDataAddresses.data.addresses];
 
     return mergedAddresses;
 };
 
 const mergeOrders = (accDataOrders, currDataOrders) => {
-    let mergedOrders = [];
-
-    let orderMap = {};
-    const addOrUpdateOrder = (order) => {
-        if (orderMap[order.id]) {
-            orderMap[order.id] = { ...orderMap[order.id], ...order };
-        } else {
-            orderMap[order.id] = { ...order};
-        }
-    };
-
-    accDataOrders.data.orders.forEach(order => addOrUpdateOrder(order));
-    currDataOrders.data.orders.forEach(order => addOrUpdateOrder(order));
-
-    mergedOrders = Object.values(orderMap);
+    let mergedOrders = [...accDataOrders.data.orders, ...currDataOrders.data.orders];
 
     return mergedOrders;
 };
+
+const mergeArrays = (accData, currData, field) => {
+    let mergedArray = [...accData.data[field], ...currData.data[field]];
+
+    return mergedArray;
+}
 
 const processProfile = async (profiles, mergedStream, oldDataStream) => {
     let [mergedProfile, winningProfile, others] = await buildProfiles(profiles[0], profiles);
@@ -313,8 +236,8 @@ const toOneApplyingMergeRules = () => {
         }
         curr.data ??= {};
         curr.data.children &&= mergeChildren(acc, curr);
-        curr.data.addresses &&= mergeAddresses(acc, curr);
-        curr.data.orders &&= mergeOrders(acc, curr);
+        curr.data.addresses &&= mergeArrays(acc, curr, 'addresses');
+        curr.data.orders &&= mergeArrays(acc, curr, 'orders');
         curr.data.clubId &&= clubIdRule(acc, curr);
         curr.data.regSource &&= concatFieldRule(acc.data, curr.data, 'regSource');
         curr.data.cMarketingCode &&= concatFieldRule(acc.data, curr.data, 'cMarketingCode');
@@ -385,9 +308,9 @@ const optinsToEntitlementsOfDomainOptins = profile => {
  * @param {object[]} profilesToMerge
  */
 const mergeProfilesDACH = (profilesToMerge) => {
-    profilesToMerge.forEach(fillArrayWithSource);
     let res = profilesToMerge
         .sort(byIsLiteAndByLastUpdated)
+        .map(fillArrayWithSource)
         .map(optinsToEntitlementsOfDomainOptins)
         .reduce(toOneApplyingMergeRules(), {});
     res.preferences.terms !== undefined ? res.preferences.terms.TermsOfUse_v2 = res?.preferences?.terms?.TermsOfUse : null;
@@ -405,16 +328,14 @@ const createNewOutputFile = (type, index) => {
 };
 const fillArrayWithSource = profile => {
     const source = profile.domain;
-    profile.data.children &&= fillArrayWithSourceHelper(profile.data.children, source);
-    profile.data.addresses &&= fillArrayWithSourceHelper(profile.data.addresses, source);
-    profile.data.orders &&= fillArrayWithSourceHelper(profile.data.orders, source);
-    profile.data.abbandonatedCart &&= fillArrayWithSourceHelper(profile.data.abbandonatedCart, source);
-    profile.data.events &&= fillArrayWithSourceHelper(profile.data.events, source);
+    profile.data.children &&= profile.data.children.map(child => ({ ...child, source }));
+    profile.data.addresses &&= profile.data.addresses.map(address => ({ ...address, source }));
+    profile.data.orders &&= profile.data.orders.map(order => ({ ...order, source }));
+    profile.data.abbandonatedCart &&= profile.data.abbandonatedCart.map(cart => ({ ...cart, source }));
+    profile.data.events &&= profile.data.events.map(event => ({ ...event, source }));
     return profile;
 }
-const fillArrayWithSourceHelper = (array, source) => {
-    return array.map(item => ({ ...item, source }));
-}
+
 const mergeProfiles = async () => {
     let userCount = 0;
     let fileIndex = 1;
@@ -503,12 +424,9 @@ module.exports = {
     createOptinPreference,
     processOptin,
     loadOptin,
-    mergeTechnicalFields,
     mergeChildren,
     mergeAddresses,
     mergeOrders,
-    determineWinningProfile,
-    mergeUsers,
     processProfile,
     buildProfiles,
     mergeProfiles,

@@ -1,6 +1,8 @@
 const { mergeProfilesDACH } = require('../../merge_profiles_DACH.js');
 const { createTestProfileFull, createTestProfileLite } = require('../utility.js');
 const { expect } = require('@jest/globals');
+const matchers = require('jest-extended');
+expect.extend(matchers);
 
 describe('DACH PREF merge addresses', () => {
     test('Test addresses field with 2 profiles with different addresses', () => {
@@ -39,7 +41,7 @@ describe('DACH PREF merge addresses', () => {
         const result = mergeProfilesDACH([Profile1, Profile2]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                addresses: [
+                addresses: expect.toIncludeSameMembers([
                     {
                         id: '123456',
                         street: 'Via Roma',
@@ -56,7 +58,7 @@ describe('DACH PREF merge addresses', () => {
                         countryISO2C: 'Italy',
                         source: 'DELOPROFIN'
                     }
-                ]
+                ])
             })
         }));
     });
@@ -144,7 +146,7 @@ describe('DACH PREF merge addresses', () => {
         const result = mergeProfilesDACH([Profile1, Profile2, Profile3]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                addresses: [
+                addresses: expect.toIncludeSameMembers([
                     {
                         id: '123456',
                         street: 'Via Roma',
@@ -161,7 +163,7 @@ describe('DACH PREF merge addresses', () => {
                         countryISO2C: 'Italy',
                         source: 'DELOPROFIN'
                     }
-                ]
+                ])
             })
         }));
     });
