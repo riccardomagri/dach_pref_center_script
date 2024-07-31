@@ -228,21 +228,23 @@ const mergeChildren = (accDataChildren, currDataChildren) => {
 };
 
 // mergeAddresses è una funzione che prende due profili e restituisce un array di indirizzi combinati
-const mergeAddresses = (winningProfile, losingProfile) => {
+const mergeAddresses = (accDataAddresses, currDataAddresses) => {
     let mergedAddresses = [];
 
     let addressMap = {};
-    const addOrUpdateAddress = (address, clubId) => {
+    const addOrUpdateOrder = (address) => {
         if (addressMap[address.id]) {
-            addressMap[address.id] = { ...addressMap[address.id], ...address, source: clubId };
+            addressMap[address.id] = { ...addressMap[address.id], ...address };
         } else {
-            addressMap[address.id] = { ...address, source: clubId };
+            addressMap[address.id] = { ...address };
         }
     };
-    winningProfile.data.addresses.forEach(address => addOrUpdateAddress(address, winningProfile.data.clubId));
-    losingProfile.data.addresses.forEach(address => addOrUpdateAddress(address, losingProfile.data.clubId));
 
-    mergeAddresses = Object.values(addressMap);
+    accDataAddresses.data.addresses.forEach(address => addOrUpdateOrder(address));
+    currDataAddresses.data.addresses.forEach(address => addOrUpdateOrder(address));
+
+    mergedAddresses = Object.values(addressMap);
+
     return mergedAddresses;
 };
 
@@ -342,14 +344,15 @@ const toOneApplyingMergeRules = () => {
         curr.data.division = "SN";
         curr.data.region = "EMEA";
         curr.data.countryDivision = "DE";
-        curr.data.typeOfMember = typeOfMemberRule(typeOfMemberRegistry);
+        curr.data.typeOfMember &&= typeOfMemberRule(typeOfMemberRegistry);
+        curr.data.addresses &&= mergeAddresses(acc, curr);
         return merge({}, acc, curr);
     }
 };
 
 const concatFieldRule = (accData, currData, field) => {
-   return accData[field].includes(currData[field]) ? accData[field] : `${accData[field]}|${currData[field]}`
-} 
+    return accData[field].includes(currData[field]) ? accData[field] : `${accData[field]}|${currData[field]}`
+}
 
 const typeOfMemberRule = (registry) => {
     if (registry.has("DE NUTRICIA")) {
@@ -364,14 +367,13 @@ const typeOfMemberRule = (registry) => {
 }
 
 const clubIdRule = (acc, curr) => {
-    if(curr?.data?.clubId !== undefined){
-        if(acc.created > curr.created){
-            acc.data.clubId = curr.data.clubId;
+    if (curr?.data?.clubId !== undefined) {
+        if (acc.created < curr.created) {
+            return acc.data.clubId;
         } else {
-            curr.data.clubId = acc.data.clubId;
+            return curr.data.clubId;
         }
     }
-    return acc.data.clubId;
 }
 
 
@@ -524,16 +526,5 @@ module.exports = {
     generateGigyaInput,
     readAndProcessFiles,
     mergeProfilesDACH
-};
-const keepTheMostRecent = (winner, profile) => {
-    if (!winner) {
-        return profile;
-    } else {
-        if (new Date(winner.lastUpdated) > new Date(profile.lastUpdated)) {
-            return winner;
-        } else {
-            return profile;
-        }
-    }
 };
 
