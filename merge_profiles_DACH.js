@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { Writable } = require('stream')
 const path = require('path');
 const csvStream = require('csv-write-stream');
 const JSONStream = require('JSONStream');
@@ -24,6 +25,37 @@ const clubMapping = {
     "DE DANONINO": "optinDanonino"
 };
 
+/** 
+*  An object representing the user
+ * @typedef {Object} Profile
+ * @property {Data} data - Object containing the user info
+ * @property {Preferences} preferences 
+ */
+
+/**
+ * @typedef {Object} Data 
+ * @property {Object[]} children
+ * @property {Object[]} addresses
+ */
+
+/**
+ * An object containing the optins
+ * @typedef {Object} Preferences 
+ * @property {Object} terms - Object containing the terms of use
+ * @property {Optin} [optin$] - a generic optin where $ is the optin name
+ */
+
+/**
+ * @typedef {Object} Optin
+ * @property {boolean} isConsentGranted
+ */
+
+
+
+/**
+ * @param {Preferences} preferences 
+ * @returns {Optin}
+ */
 const getMostRecentConsent = (preferences) => {
     let mostRecentConsent = null;
 
@@ -39,6 +71,10 @@ const getMostRecentConsent = (preferences) => {
 };
 
 
+/**
+ * @param {Optin} mostRecentConsent 
+ * @returns {Optin} 
+ */
 const createOptinPreference = (mostRecentConsent) => ({
     isConsentGranted: true,
     lastConsentModified: mostRecentConsent?.lastConsentModified || new Date().toISOString(),
@@ -50,6 +86,13 @@ const createOptinPreference = (mostRecentConsent) => ({
 });
 
 
+/**
+ * 
+ * @param {Writable} outputCsvStreamWriter 
+ * @param {Writable} mergedJsonStreamWriter 
+ * @param {Profile} mergedProfile 
+ * @param {Profile[]} originalProfiles 
+ */
 const writeToFile = async (outputCsvStreamWriter, mergedJsonStreamWriter, mergedProfile, originalProfiles) => {
     outputCsvStreamWriter.write({
         old_UID: mergedProfile?.UID,
@@ -81,6 +124,9 @@ const writeToFile = async (outputCsvStreamWriter, mergedJsonStreamWriter, merged
  * I figli vengono combinati in base alla data di nascita o alla data di parto 
  * Se la differenza tra le date è inferiore a 9 mesi, il figlio più giovane viene scartato
  * Se un figlio ha una data di nascita e l'altro ha una data di parto, la data di parto viene considerata come data di nascita
+ * @param {Object[]} accDataChildren
+ * @param {Object[]} currDataChildren
+ * @return {Object[]}
  */
 const mergeChildren = (accDataChildren, currDataChildren) => {
 
@@ -124,13 +170,23 @@ const mergeChildren = (accDataChildren, currDataChildren) => {
 };
 
 
-const mergeArrays = (accData, currData, field) => {
-    let mergedArray = [...accData.data[field], ...currData.data[field]];
-
-    return mergedArray;
+/**
+ * 
+ * @param {Profile} acc 
+ * @param {Profile} curr 
+ * @param {string} field 
+ * @returns {Object[]} 
+ */
+const concatArrays = (acc, curr, field) => {
+    return [...acc.data[field], ...curr.data[field]];
 }
 
 
+/**
+ * @param {Profile} a 
+ * @param {Profile} b 
+ * @returns {number} 
+ */
 const byIsLiteAndByLastUpdated = (a, b) => {
     if (a.hasLiteAccount && b.isRegistered) {
         return -1;
@@ -141,59 +197,71 @@ const byIsLiteAndByLastUpdated = (a, b) => {
     }
 };
 
+/**
+ * @returns {(acc: Profile, curr: Profile) => Profile} - reducer function
+ */
 const toOneApplyingMergeRules = () => {
-    const typeOfMemberRegistry = new Map();
+    const ruler = new Ruler();
     return (acc, curr) => {
-        if (curr.data.typeOfMember !== undefined) {
-            typeOfMemberRegistry.set(curr.data.clubId, curr.data.typeOfMember);
-        }
-        if (JSON.stringify(acc) === "{}") {
-            return curr;
-        }
         curr.data ??= {};
         curr.data.children &&= mergeChildren(acc, curr);
-        curr.data.addresses &&= mergeArrays(acc, curr, 'addresses');
-        curr.data.orders &&= mergeArrays(acc, curr, 'orders');
+        curr.data.addresses &&= concatArrays(acc, curr, 'addresses');
+        curr.data.orders &&= concatArrays(acc, curr, 'orders');
         curr.data.clubId &&= clubIdRule(acc, curr);
-        curr.data.regSource &&= concatFieldRule(acc.data, curr.data, 'regSource');
-        curr.data.cMarketingCode &&= concatFieldRule(acc.data, curr.data, 'cMarketingCode');
-        curr.data.brand &&= concatFieldRule(acc.data, curr.data, 'brand');
+        curr.data.regSource &&= concatFieldRule(acc, curr, 'regSource');
+        curr.data.cMarketingCode &&= concatFieldRule(acc, curr, 'cMarketingCode');
+        curr.data.brand &&= concatFieldRule(acc, curr, 'brand');
         curr.data.division = "SN";
         curr.data.region = "EMEA";
         curr.data.countryDivision = "DE";
-        curr.data.typeOfMember &&= typeOfMemberRule(typeOfMemberRegistry);
+        curr.data.typeOfMember &&= ruler.applyTypeOfMemberRule(acc, curr);
         return merge({}, acc, curr);
     }
 };
 
 /**
  * 
- * @param {*} accData  The accumulator data
- * @param {*} currData  The current data
- * @param {*} field  The field to concatenate
+ * @param {Profile} acc  The accumulator data
+ * @param {Profile} curr  The current data
+ * @param {string} field  The field to concatenate
  * @returns  The concatenated field
  */
-const concatFieldRule = (accData, currData, field) => {
-    return accData[field].includes(currData[field]) ? accData[field] : `${accData[field]}|${currData[field]}`
+const concatFieldRule = (acc, curr, field) => {
+    return acc.data[field].includes(curr.data[field])
+        ? acc.data[field]
+        : `${acc.data[field]}|${curr.data[field]}`
+}
+
+
+/**
+ * create an object remembering some info
+ * of the object received as arguments in its methods
+ */
+class Ruler {
+    #typeOfMemberRegistry = new Map();
+    applyTypeOfMemberRule(...profiles) {
+        profiles.filter(profile => profile.data.typeOfMember !== undefined).forEach(profile =>
+            this.#typeOfMemberRegistry.set(profile.data.clubId, profile.data.typeOfMember)
+        );
+
+        if (this.#typeOfMemberRegistry.has("DE NUTRICIA")) {
+            return this.#typeOfMemberRegistry.get("DE NUTRICIA");
+        } else if (this.#typeOfMemberRegistry.has("DE LOPROFIN")) {
+            return this.#typeOfMemberRegistry.get("DE LOPROFIN");
+        } else if (this.#typeOfMemberRegistry.has("DE APTA")) {
+            return this.#typeOfMemberRegistry.get("DE APTA");
+        } else if (this.#typeOfMemberRegistry.has("DE MILUPA")) {
+            return this.#typeOfMemberRegistry.get("DE MILUPA");
+        }
+    }
 }
 
 /**
  * 
- * @param {Map} registry  The registry of type of members
- * @returns  The type of member
+ * @param {Profile} acc 
+ * @param {Profile} curr 
+ * @returns {string} 
  */
-const typeOfMemberRule = (registry) => {
-    if (registry.has("DE NUTRICIA")) {
-        return registry.get("DE NUTRICIA");
-    } else if (registry.has("DE LOPROFIN")) {
-        return registry.get("DE LOPROFIN");
-    } else if (registry.has("DE APTA")) {
-        return registry.get("DE APTA");
-    } else if (registry.has("DE MILUPA")) {
-        return registry.get("DE MILUPA");
-    }
-}
-
 const clubIdRule = (acc, curr) => {
     if (curr?.data?.clubId !== undefined) {
         if (acc.created < curr.created) {
@@ -205,6 +273,11 @@ const clubIdRule = (acc, curr) => {
 }
 
 
+/**
+ * 
+ * @param {Profile} profile 
+ * @returns {Profile}
+ */
 const optinsToEntitlementsOfDomainOptins = profile => {
     const optinKey = clubMapping[profile.data.clubId];
     if (optinKey) {
@@ -220,20 +293,14 @@ const optinsToEntitlementsOfDomainOptins = profile => {
     }
     return profile;
 };
+
+
 /**
- * @param {object[]} profilesToMerge
+ * 
+ * @param {string} type - csv or json
+ * @param {number} index 
+ * @returns {Object.<string, Writable>} an object with two Writable streams
  */
-const mergeProfilesDACH = (profilesToMerge) => {
-    let mergedProfile = profilesToMerge
-        .sort(byIsLiteAndByLastUpdated)
-        .map(fillArrayWithSource)
-        .map(optinsToEntitlementsOfDomainOptins)
-        .reduce(toOneApplyingMergeRules(), {});
-    mergedProfile.preferences.terms !== undefined ? mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile?.preferences?.terms?.TermsOfUse : null;
-
-    return mergedProfile;
-};
-
 const createNewOutputFile = (type, index) => {
     const fileName = type === 'json' ? `user-user-DE-merged_${index}.json` : `oldData_merged_profile.csv`;
     const filePath = path.join(outputFolder, fileName);
@@ -242,16 +309,47 @@ const createNewOutputFile = (type, index) => {
     fileStream.pipe(outputStream);
     return { fileStream, outputStream };
 };
+
+/**
+ * @param {Profile[]} profilesToMerge - a list of profiles to merge
+ * @returns {Profile} the merged profile
+ */
+const mergeProfilesDACH = (profilesToMerge) => {
+    let mergedProfile = profilesToMerge
+        .sort(byIsLiteAndByLastUpdated)
+        .map(fillArrayWithSource)
+        .map(optinsToEntitlementsOfDomainOptins)
+        .reduce(toOneApplyingMergeRules());
+    
+    if (mergedProfile?.preferences?.terms) {
+        mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile.preferences.terms.TermsOfUse;
+    }
+
+    return mergedProfile;
+};
+
+
+/**
+ * 
+ * @param {Profile} profile 
+ * @returns {Profile} 
+ */
 const fillArrayWithSource = profile => {
     const source = profile.domain;
-    profile.data.children &&= profile.data.children.map(child => ({ ...child, source }));
-    profile.data.addresses &&= profile.data.addresses.map(address => ({ ...address, source }));
-    profile.data.orders &&= profile.data.orders.map(order => ({ ...order, source }));
-    profile.data.abbandonatedCart &&= profile.data.abbandonatedCart.map(cart => ({ ...cart, source }));
-    profile.data.events &&= profile.data.events.map(event => ({ ...event, source }));
+    for (const arrayField of ['children', 'addresses', 'orders', 'abbandonatedCart', 'events']) {
+        profile.data[arrayField] &&= profile.data[arrayField].map(elem => ({ ...elem, source }));
+    }
     return profile;
 }
 
+
+/**
+ * ```
+ * 1. read the Map where the profiles to merge are loaded
+ * 2. write the merged profile on json and csv
+ * 3. delete the Map entry to save memory
+ * ```
+ */
 const mergeProfiles = async () => {
     let userCount = 0;
     let fileIndex = 1;
@@ -285,6 +383,11 @@ const mergeProfiles = async () => {
     console.log("All profiles have been merged and files have been written.");
 };
 
+/**
+ * close the Writable streams 
+ * @param {Writable} mergedStream 
+ * @param {Writable} oldDataStream 
+ */
 const generateGigyaInput = async (mergedStream, oldDataStream) => {
     console.log('Generating gigya input array');
     await new Promise(resolve => {
@@ -297,6 +400,13 @@ const generateGigyaInput = async (mergedStream, oldDataStream) => {
     });
 };
 
+/**
+ * ```
+ * 1. read each file in the /input folder 
+ * 2. for each file store the profile in an array of a Map using the email as key
+ * 3. call the function that read that Map and write files in /output folder
+ * ```
+ */
 const readAndProcessFiles = async () => {
     console.log("readAndProcessFiles: Starting to read files from input folder");
     const files = await fs.promises.readdir(inputFolder);
@@ -329,13 +439,6 @@ const readAndProcessFiles = async () => {
     console.log("All files have been read.");
 };
 
-/*
-(async () => {
-    console.log("Starting the merging process");
-    await readAndProcessFiles();
-    console.log("Merging process completed");
-})();
-*/
 
 module.exports = {
     getMostRecentConsent,
