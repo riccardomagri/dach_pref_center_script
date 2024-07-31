@@ -186,78 +186,42 @@ const mergeTechnicalFields = (user1, user2) => {
 // Se la differenza tra le date è inferiore a 9 mesi, il figlio più giovane viene scartato
 // Se la differenza è maggiore di 9 mesi, entrambi i figli vengono mantenuti
 // Se un figlio ha una data di nascita e l'altro ha una data di parto, la data di parto viene considerata come data di nascita
-const mergeChildren = (winningProfile, losingProfile) => {
-    let mergedChildren = [...winningProfile.data.children];
+const mergeChildren = (accDataChildren, currDataChildren) => {
 
-    losingProfile.data.children.forEach(child2 => {
+    let mergedChildren = [...accDataChildren.data.children];
+    const lastUpdated1 = new Date(accDataChildren.lastUpdated);
+    const lastUpdated2 = new Date(currDataChildren.lastUpdated);
+    currDataChildren.data.children.forEach(child2 => {
         let shouldAddChild2 = true;
 
         mergedChildren = mergedChildren.filter(child1 => {
-            if (child1.dateOfBirth && child2.dateOfBirth) {
-                const date1 = new Date(child1.dateOfBirth);
-                const date2 = new Date(child2.dateOfBirth);
-                const diffInMonths = Math.abs(date1 - date2) / (1000 * 60 * 60 * 24 * 30);
+            const date1 = child1.dateOfBirth ? new Date(child1.dateOfBirth) : new Date(child1.dueDate);
+            const date2 = child2.dateOfBirth ? new Date(child2.dateOfBirth) : new Date(child2.dueDate);
 
-                if (date1.getTime() === date2.getTime()) {
-                    shouldAddChild2 = false;
-                    return true;
-                } else if (diffInMonths < 9) {
-                    if (date1 < date2) {
-                        return false;
-                    } else {
-                        shouldAddChild2 = false;
-                        return true;
-                    }
-                } else {
-                    return true;
-                }
-            } else if (child1.dueDate && child2.dueDate) {
-                const date1 = new Date(child1.dueDate);
-                const date2 = new Date(child2.dueDate);
-                const diffInMonths = Math.abs(date1 - date2) / (1000 * 60 * 60 * 24 * 30);
+            if (date1.getTime() === date2.getTime()) {
 
-                if (date1.getTime() === date2.getTime()) {
-                    shouldAddChild2 = false;
-                    return true;
-                } else if (diffInMonths < 9) {
-                    if (date1 < date2) {
-                        return false;
-                    } else {
-                        shouldAddChild2 = false;
-                        return true;
-                    }
+                if (lastUpdated1 < lastUpdated2) {
+                    return false; // Remove child1
                 } else {
-                    return true;
-                }
-            } else if ((child1.dateOfBirth && child2.dueDate) || (child1.dueDate && child2.dateOfBirth)) {
-                const date1 = child1.dateOfBirth ? new Date(child1.dateOfBirth) : new Date(child1.dueDate);
-                const date2 = child2.dateOfBirth ? new Date(child2.dateOfBirth) : new Date(child2.dueDate);
-                const diffInMonths = Math.abs(date1 - date2) / (1000 * 60 * 60 * 24 * 30);
-
-                if (diffInMonths < 9) {
-                    if (date1 < date2) {
-                        return false;
-                    } else {
-                        shouldAddChild2 = false;
-                        return true;
-                    }
-                } else {
-                    return true;
+                    shouldAddChild2 = false; // Do not add child2
                 }
             }
             return true;
         });
 
         if (shouldAddChild2) {
-            child2.source = losingProfile.data.clubId;
             mergedChildren.push(child2);
         }
     });
 
-    mergedChildren.forEach(child => {
-        if (!child.source) {
-            child.source = winningProfile.data.clubId;
-        }
+    mergedChildren.sort((a, b) => {
+        const dateA = a.dateOfBirth ? new Date(a.dateOfBirth) : new Date(a.dueDate);
+        const dateB = b.dateOfBirth ? new Date(b.dateOfBirth) : new Date(b.dueDate);
+        return dateA - dateB;
+    });
+
+    mergedChildren.forEach((child, index) => {
+        child.isFirstBaby = index === 0 ? 1 : 0;
     });
 
     return mergedChildren;
@@ -369,8 +333,9 @@ const toOneApplyingMergeRules = () => {
         if (JSON.stringify(acc) === "{}") {
             return curr;
         }
-
         curr.data ??= {};
+        curr.data.children = mergeChildren(acc, curr);
+        curr.data.clubId &&= clubIdRule(acc, curr);
         curr.data.regSource &&= concatFieldRule(acc.data, curr.data, 'regSource');
         curr.data.cMarketingCode &&= concatFieldRule(acc.data, curr.data, 'cMarketingCode');
         curr.data.brand &&= concatFieldRule(acc.data, curr.data, 'brand');
@@ -398,6 +363,18 @@ const typeOfMemberRule = (registry) => {
     }
 }
 
+const clubIdRule = (acc, curr) => {
+    if(curr?.data?.clubId !== undefined){
+        if(acc.created > curr.created){
+            acc.data.clubId = curr.data.clubId;
+        } else {
+            curr.data.clubId = acc.data.clubId;
+        }
+    }
+    return acc.data.clubId;
+}
+
+
 const optinsToEntitlementsOfDomainOptins = profile => {
     const optinKey = clubMapping[profile.data.clubId];
     if (optinKey) {
@@ -417,6 +394,7 @@ const optinsToEntitlementsOfDomainOptins = profile => {
  * @param {object[]} profilesToMerge
  */
 const mergeProfilesDACH = (profilesToMerge) => {
+    profilesToMerge.forEach(fillArrayWithSource);
     let res = profilesToMerge
         .sort(byIsLiteAndByLastUpdated)
         .map(optinsToEntitlementsOfDomainOptins)
@@ -434,7 +412,18 @@ const createNewOutputFile = (type, index) => {
     fileStream.pipe(outputStream);
     return { fileStream, outputStream };
 };
-
+const fillArrayWithSource = profile => {
+    const source = profile.domain;
+    profile.data.children &&= fillArrayWithSourceHelper(profile.data.children, source);
+    profile.data.addresses &&= fillArrayWithSourceHelper(profile.data.addresses, source);
+    profile.data.orders &&= fillArrayWithSourceHelper(profile.data.orders, source);
+    profile.data.abbandonatedCart &&= fillArrayWithSourceHelper(profile.data.abbandonatedCart, source);
+    profile.data.events &&= fillArrayWithSourceHelper(profile.data.events, source);
+    return profile;
+}
+const fillArrayWithSourceHelper = (array, source) => {
+    return array.map(item => ({ ...item, source }));
+}
 const mergeProfiles = async () => {
     let userCount = 0;
     let fileIndex = 1;

@@ -14,7 +14,6 @@ const createTestProfile = (overrides = {}) => {
         region: 'EMEA',
         countryDivision: 'DE',
         lastSystemUpdatedProfile: new Date().toISOString(),
-        preferredLanguage: 'de_de',
         created: new Date().toISOString()
     },
     preferences: {'terms' : {'TermsOfUse': {'isConsentGranted': true}}},
