@@ -325,21 +325,24 @@ const byIsLiteAndByLastUpdated = (a, b) => {
 };
 
 const toOneApplyingMergeRules = () => {
-    const ruler = new Ruler();
+    const typeOfMemberRegistry = new Map();
     return (acc, curr) => {
+        if (curr.data.typeOfMember !== undefined) {
+            typeOfMemberRegistry.set(curr.data.clubId, curr.data.typeOfMember);
+        }
         if (JSON.stringify(acc) === "{}") {
             return curr;
         }
         curr.data ??= {};
-        curr.data.children = mergeChildren(acc, curr);
+        curr.data.children &&= mergeChildren(acc, curr);
         curr.data.clubId &&= clubIdRule(acc, curr);
-        curr.data.regSource &&= ruler.applyConcatFieldRule(acc, curr, 'regSource');
-        curr.data.cMarketingCode &&= ruler.applyConcatFieldRule(acc, curr, 'cMarketingCode');
-        curr.data.brand &&= ruler.applyConcatFieldRule(acc, curr, 'brand');
+        curr.data.regSource &&= concatFieldRule(acc.data, curr.data, 'regSource');
+        curr.data.cMarketingCode &&= concatFieldRule(acc.data, curr.data, 'cMarketingCode');
+        curr.data.brand &&= concatFieldRule(acc.data, curr.data, 'brand');
         curr.data.division = "SN";
         curr.data.region = "EMEA";
         curr.data.countryDivision = "DE";
-        curr.data.typeOfMember = ruler.applyTypeOfMemberRule(acc, curr);
+        curr.data.typeOfMember = typeOfMemberRule(typeOfMemberRegistry);
         return merge({}, acc, curr);
     }
 };
@@ -359,6 +362,18 @@ const typeOfMemberRule = (registry) => {
         return registry.get("DE MILUPA");
     }
 }
+
+const clubIdRule = (acc, curr) => {
+    if(curr?.data?.clubId !== undefined){
+        if(acc.created > curr.created){
+            acc.data.clubId = curr.data.clubId;
+        } else {
+            curr.data.clubId = acc.data.clubId;
+        }
+    }
+    return acc.data.clubId;
+}
+
 
 const optinsToEntitlementsOfDomainOptins = profile => {
     const optinKey = clubMapping[profile.data.clubId];
