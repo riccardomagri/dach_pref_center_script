@@ -361,42 +361,49 @@ const byIsLiteAndByLastUpdated = (a, b) => {
 };
 
 const toOneApplyingMergeRules = () => {
-    const typeOfMemberRegistry = new Map();
+    const ruler = new Ruler();
     return (acc, curr) => {
-        if (curr.data.typeOfMember !== undefined) {
-            typeOfMemberRegistry.set(curr.data.clubId, curr.data.typeOfMember);
-        }
         if (JSON.stringify(acc) === "{}") {
             return curr;
         }
 
         curr.data ??= {};
-        curr.data.regSource &&= concatFieldRule(acc.data, curr.data, 'regSource');
-        curr.data.cMarketingCode &&= concatFieldRule(acc.data, curr.data, 'cMarketingCode');
-        curr.data.brand &&= concatFieldRule(acc.data, curr.data, 'brand');
+        curr.data.regSource &&= ruler.applyConcatFieldRule(acc, curr, 'regSource');
+        curr.data.cMarketingCode &&= ruler.applyConcatFieldRule(acc, curr, 'cMarketingCode');
+        curr.data.brand &&= ruler.applyConcatFieldRule(acc, curr, 'brand');
         curr.data.division = "SN";
         curr.data.region = "EMEA";
         curr.data.countryDivision = "DE";
-        curr.data.typeOfMember = typeOfMemberRule(typeOfMemberRegistry);
+        curr.data.typeOfMember = ruler.applyTypeOfMemberRule(acc, curr);
         return merge({}, acc, curr);
     }
 };
 
-const concatFieldRule = (accData, currData, field) => {
-   return accData[field].includes(currData[field]) ? accData[field] : `${accData[field]}|${currData[field]}`
-} 
+class Ruler {
+    #typeOfMemberRegistry = new Map();
 
-const typeOfMemberRule = (registry) => {
-    if (registry.has("DE NUTRICIA")) {
-        return registry.get("DE NUTRICIA");
-    } else if (registry.has("DE LOPROFIN")) {
-        return registry.get("DE LOPROFIN");
-    } else if (registry.has("DE APTA")) {
-        return registry.get("DE APTA");
-    } else if (registry.has("DE MILUPA")) {
-        return registry.get("DE MILUPA");
+    applyConcatFieldRule(profileA, profileB, field) {
+        return profileA.data[field].includes(profileB.data[field])
+            ? profileA.data[field]
+            : `${profileA.data[field]}|${profileB.data[field]}`
+    }
+
+    applyTypeOfMemberRule(...profiles) {
+        profiles.filter(profile => profile.data.typeOfMember !== undefined)
+            .forEach(profile => this.#typeOfMemberRegistry.set(profile.data.clubId, profile.data.typeOfMember))
+
+        if (this.#typeOfMemberRegistry.has("DE NUTRICIA")) {
+            return this.#typeOfMemberRegistry.get("DE NUTRICIA");
+        } else if (this.#typeOfMemberRegistry.has("DE LOPROFIN")) {
+            return this.#typeOfMemberRegistry.get("DE LOPROFIN");
+        } else if (this.#typeOfMemberRegistry.has("DE APTA")) {
+            return this.#typeOfMemberRegistry.get("DE APTA");
+        } else if (this.#typeOfMemberRegistry.has("DE MILUPA")) {
+            return this.#typeOfMemberRegistry.get("DE MILUPA");
+        }
     }
 }
+
 
 const optinsToEntitlementsOfDomainOptins = profile => {
     const optinKey = clubMapping[profile.data.clubId];
