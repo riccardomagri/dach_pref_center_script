@@ -49,88 +49,39 @@ const createOptinPreference = (mostRecentConsent) => ({
     tags: mostRecentConsent?.tags || []
 });
 
-const processOptin = (profile, res) => {
-    const preferences = profile.preferences;
-    const clubKey = clubMapping[profile.data.clubId];
 
-    if (clubKey) {
-        const mostRecentConsent = getMostRecentConsent(preferences);
-        res.preferences[clubKey] = createOptinPreference(mostRecentConsent);
-
-        for (const entitlement in preferences) {
-            if (preferences[entitlement].isConsentGranted) {
-                res.preferences[clubKey].entitlements.push(entitlement);
-            }
-        }
-    }
-};
-
-// loadOptin è una funzione che prende un profilo e restituisce un profilo con i dati di optin aggiornati
-// Se il profilo ha un clubId che corrisponde a un clubMapping, viene aggiunto un optin per quel club
-// Se il profilo ha altri profili con lo stesso email, vengono aggiunti gli optin per quei club
-// Se il profilo ha più optin per lo stesso club, viene aggiunto solo l'optin più recente
-const loadOptin = async (winner, others) => {
-    const preferencesA = winner?.preferences;
-    const newUID = uuidv4();
-    const res = {
-        ...winner,
-        UID: newUID,
-        preferences: {
-            terms: {
-                TermsOfUse_v2: {
-                    isConsentGranted: true,
-                    actionTimestamp: preferencesA?.terms?.TermsOfUse?.actionTimestamp || new Date().toISOString(),
-                    lastConsentModified: preferencesA?.terms?.TermsOfUse?.lastConsentModified || new Date().toISOString(),
-                    entitlements: preferencesA?.terms?.TermsOfUse?.entitlements || [],
-                    docDate: preferencesA?.terms?.TermsOfUse?.docDate || "2020-09-21T00:00:00Z",
-                    customData: preferencesA?.terms?.TermsOfUse?.customData || [],
-                    tags: preferencesA?.terms?.TermsOfUse?.tags || []
-                }
-            }
-        }
-    };
-    processOptin(winner, res, clubMapping);
-    for (const otherProfile of others) {
-        processOptin(otherProfile, res, clubMapping);
-    }
-
-    return res;
-};
-
-const writeToFile = async (oldDataStream, mergedStream, winner, others, res) => {
-    oldDataStream.write({
-        old_UID: winner?.UID,
-        old_clubId: winner?.data?.clubId,
+const writeToFile = async (outputCsvStreamWriter, mergedJsonStreamWriter, mergedProfile, originalProfiles) => {
+    outputCsvStreamWriter.write({
+        old_UID: mergedProfile?.UID,
+        old_clubId: mergedProfile?.data?.clubId,
         new_UID: res?.UID,
-        new_clubId: winner?.data?.clubId,
-        email: winner?.profile?.email.toLowerCase()
+        new_clubId: mergedProfile?.data?.clubId,
+        email: mergedProfile?.profile?.email.toLowerCase()
     });
 
-    for (const otherProfile of others) {
-        oldDataStream.write({
+    for (const otherProfile of originalProfiles) {
+        outputCsvStreamWriter.write({
             old_UID: otherProfile?.UID,
             old_clubId: otherProfile?.data?.clubId,
-            new_UID: res?.UID,
-            new_clubId: winner?.data?.clubId,
-            email: winner?.profile?.email.toLowerCase()
+            new_UID: mergedProfile?.UID,
+            new_clubId: mergedProfile?.data?.clubId,
+            email: mergedProfile?.profile?.email.toLowerCase()
         });
-        processOptin(otherProfile, res, clubMapping);
     }
 
-    if (res) {
-        mergedStream.write(res);
+    if (mergedProfile) {
+        mergedJsonStreamWriter.write(mergedProfile);
     } else {
         console.error('Undefined result when trying to write to mergedStream:', res);
     }
 };
 
-
-
-// mergeChildren è una funzione che prende due profili e restituisce un array di figli combinati
-// I figli vengono combinati in base alla data di nascita o alla data di parto
-// Se la differenza tra le date è inferiore a 9 mesi, il figlio più giovane viene scartato
-// Se la differenza è maggiore di 9 mesi, entrambi i figli vengono mantenuti
-// Se un figlio ha una data di nascita e l'altro ha una data di parto, la data di parto viene considerata come data di nascita
+/**
+ * mergeChildren è una funzione che prende due profili e restituisce un array di figli combinati
+ * I figli vengono combinati in base alla data di nascita o alla data di parto 
+ * Se la differenza tra le date è inferiore a 9 mesi, il figlio più giovane viene scartato
+ * Se un figlio ha una data di nascita e l'altro ha una data di parto, la data di parto viene considerata come data di nascita
+ */
 const mergeChildren = (accDataChildren, currDataChildren) => {
 
     let mergedChildren = [...accDataChildren.data.children];
@@ -172,18 +123,6 @@ const mergeChildren = (accDataChildren, currDataChildren) => {
     return mergedChildren;
 };
 
-// mergeAddresses è una funzione che prende due profili e restituisce un array di indirizzi combinati
-const mergeAddresses = (accDataAddresses, currDataAddresses) => {
-    let mergedAddresses = [...accDataAddresses.data.addresses, ...currDataAddresses.data.addresses];
-
-    return mergedAddresses;
-};
-
-const mergeOrders = (accDataOrders, currDataOrders) => {
-    let mergedOrders = [...accDataOrders.data.orders, ...currDataOrders.data.orders];
-
-    return mergedOrders;
-};
 
 const mergeArrays = (accData, currData, field) => {
     let mergedArray = [...accData.data[field], ...currData.data[field]];
@@ -191,29 +130,6 @@ const mergeArrays = (accData, currData, field) => {
     return mergedArray;
 }
 
-const processProfile = async (profiles, mergedStream, oldDataStream) => {
-    let [mergedProfile, winningProfile, others] = await buildProfiles(profiles[0], profiles);
-    await writeToFile(oldDataStream, mergedStream, winningProfile, others, mergedProfile);
-};
-
-const buildProfiles = async (profile, profilesToMerge) => {
-    let losingProfile = null;
-    let others = [];
-    let winningProfile = profile;
-    let lastUpdatedProfile = profile;
-    for (let i = 1; i < profilesToMerge.length; i++) {
-        [winningProfile, losingProfile] = mergeUsers(winningProfile, profilesToMerge[i]);
-        if (new Date(winningProfile.lastUpdated) > new Date(lastUpdatedProfile.lastUpdated)) {
-            lastUpdatedProfile = winningProfile;
-        } else {
-            lastUpdatedProfile = losingProfile;
-        }
-        others.push(losingProfile);
-    }
-    winningProfile = mergeTechnicalFields(winningProfile, lastUpdatedProfile);
-    let mergedProfile = await loadOptin(winningProfile, others);
-    return [mergedProfile, winningProfile, others];
-};
 
 const byIsLiteAndByLastUpdated = (a, b) => {
     if (a.hasLiteAccount && b.isRegistered) {
@@ -308,14 +224,14 @@ const optinsToEntitlementsOfDomainOptins = profile => {
  * @param {object[]} profilesToMerge
  */
 const mergeProfilesDACH = (profilesToMerge) => {
-    let res = profilesToMerge
+    let mergedProfile = profilesToMerge
         .sort(byIsLiteAndByLastUpdated)
         .map(fillArrayWithSource)
         .map(optinsToEntitlementsOfDomainOptins)
         .reduce(toOneApplyingMergeRules(), {});
-    res.preferences.terms !== undefined ? res.preferences.terms.TermsOfUse_v2 = res?.preferences?.terms?.TermsOfUse : null;
+    mergedProfile.preferences.terms !== undefined ? mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile?.preferences?.terms?.TermsOfUse : null;
 
-    return res;
+    return mergedProfile;
 };
 
 const createNewOutputFile = (type, index) => {
@@ -339,30 +255,32 @@ const fillArrayWithSource = profile => {
 const mergeProfiles = async () => {
     let userCount = 0;
     let fileIndex = 1;
+    let mergedProfile = {};
 
-    let { fileStream: mergedStream, outputStream: mergedOutput } = createNewOutputFile('json', fileIndex);
-    let { fileStream: oldDataStream, outputStream: oldDataOutput } = createNewOutputFile('csv', fileIndex);
+    let { fileStream: mergedJsonStreamWriter, outputStream: mergedOutput } = createNewOutputFile('json', fileIndex);
+    let { fileStream: outputCsvStreamWriter, outputStream: oldDataOutput } = createNewOutputFile('csv', fileIndex);
 
-    for (const [email, profiles] of profilesByEmail) {
+    for (const [email, originalProfiles] of profilesByEmail) {
         if (userCount >= MAX_USERS_PER_FILE) {
             console.log(`Processed ${userCount} users, creating new output JSON file.`);
-            mergedStream.end();
+            mergedJsonStreamWriter.end();
             fileIndex++;
             userCount = 0;
 
-            ({ fileStream: mergedStream, outputStream: mergedOutput } = createNewOutputFile('json', fileIndex));
+            ({ fileStream: mergedJsonStreamWriter, outputStream: mergedOutput } = createNewOutputFile('json', fileIndex));
         }
 
-        if (profiles.length > 1) {
-            await processProfile(profiles, mergedStream, oldDataStream);
-        } else {
-            await processProfile([profiles[0]], mergedStream, oldDataStream);
+        if (originalProfiles.length >= 1) {
+            mergedProfile = mergeProfilesDACH(originalProfiles);
         }
+
+        await writeToFile(outputCsvStreamWriter, mergedJsonStreamWriter, mergedProfile, originalProfiles);
+
         profilesByEmail.delete(email);
         userCount++;
     }
 
-    await generateGigyaInput(mergedStream, oldDataStream);
+    await generateGigyaInput(mergedJsonStreamWriter, outputCsvStreamWriter);
 
     console.log("All profiles have been merged and files have been written.");
 };
@@ -422,13 +340,7 @@ const readAndProcessFiles = async () => {
 module.exports = {
     getMostRecentConsent,
     createOptinPreference,
-    processOptin,
-    loadOptin,
     mergeChildren,
-    mergeAddresses,
-    mergeOrders,
-    processProfile,
-    buildProfiles,
     mergeProfiles,
     generateGigyaInput,
     readAndProcessFiles,
