@@ -3,9 +3,7 @@ const { Writable } = require('stream')
 const path = require('path');
 const csvStream = require('csv-write-stream');
 const JSONStream = require('JSONStream');
-const { v4: uuidv4 } = require('uuid');
 const es = require('event-stream');
-const { profile } = require('console');
 const merge = require('lodash.merge');
 
 const inputFolder = './input/';
@@ -346,7 +344,7 @@ const fillArrayWithSource = profile => {
 /**
  * ```
  * 1. read the Map where the profiles to merge are loaded
- * 2. write the merged profile on json and csv
+ * 2. write the merged profile on json and csv on /output folder
  * 3. delete the Map entry to save memory
  * ```
  */
@@ -404,7 +402,7 @@ const generateGigyaInput = async (mergedStream, oldDataStream) => {
  * ```
  * 1. read each file in the /input folder 
  * 2. for each file store the profile in an array of a Map using the email as key
- * 3. call the function that read that Map and write files in /output folder
+ * 3. call the function that will consume that Map 
  * ```
  */
 const readAndProcessFiles = async () => {
