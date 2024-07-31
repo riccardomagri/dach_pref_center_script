@@ -248,49 +248,24 @@ const mergeAddresses = (accDataAddresses, currDataAddresses) => {
     return mergedAddresses;
 };
 
-const mergeOrders = (winningProfile, losingProfile) => {
+const mergeOrders = (accDataOrders, currDataOrders) => {
     let mergedOrders = [];
 
     let orderMap = {};
-    const addOrUpdateOrder = (order, clubId) => {
+    const addOrUpdateOrder = (order) => {
         if (orderMap[order.id]) {
-            orderMap[order.id] = { ...orderMap[order.id], ...order, source: clubId };
+            orderMap[order.id] = { ...orderMap[order.id], ...order };
         } else {
-            orderMap[order.id] = { ...order, source: clubId };
+            orderMap[order.id] = { ...order};
         }
     };
 
-    winningProfile.data.orders.forEach(order => addOrUpdateOrder(order, winningProfile.data.clubId));
-    losingProfile.data.orders.forEach(order => addOrUpdateOrder(order, losingProfile.data.clubId));
+    accDataOrders.data.orders.forEach(order => addOrUpdateOrder(order));
+    currDataOrders.data.orders.forEach(order => addOrUpdateOrder(order));
 
     mergedOrders = Object.values(orderMap);
 
     return mergedOrders;
-};
-
-const determineWinningProfile = (profile1, profile2) => {
-    const isProfile1Full = profile1.isRegistered || !profile1.hasLiteAccount;
-    const isProfile2Full = profile2.isRegistered || !profile2.hasLiteAccount;
-
-    if (isProfile1Full && !isProfile2Full) {
-        return [profile1, profile2];
-    } else if (!isProfile1Full && isProfile2Full) {
-        return [profile2, profile1];
-    } else if (isProfile1Full && isProfile2Full) {
-        return new Date(profile1.lastUpdated) > new Date(profile2.lastUpdated) ? [profile1, profile2] : [profile2, profile1];
-    } else {
-        return new Date(profile1.lastUpdated) > new Date(profile2.lastUpdated) ? [profile1, profile2] : [profile2, profile1];
-    }
-};
-
-const mergeUsers = (user1, user2) => {
-    let [winningProfile, losingProfile] = determineWinningProfile(user1, user2);
-
-    winningProfile.data.children = mergeChildren(winningProfile, losingProfile);
-    winningProfile.data.addresses = mergeAddresses(winningProfile, losingProfile);
-    winningProfile.data.orders = mergeOrders(winningProfile, losingProfile);
-
-    return [winningProfile, losingProfile];
 };
 
 const processProfile = async (profiles, mergedStream, oldDataStream) => {
@@ -316,6 +291,7 @@ const buildProfiles = async (profile, profilesToMerge) => {
     let mergedProfile = await loadOptin(winningProfile, others);
     return [mergedProfile, winningProfile, others];
 };
+
 const byIsLiteAndByLastUpdated = (a, b) => {
     if (a.hasLiteAccount && b.isRegistered) {
         return -1;
@@ -337,6 +313,8 @@ const toOneApplyingMergeRules = () => {
         }
         curr.data ??= {};
         curr.data.children &&= mergeChildren(acc, curr);
+        curr.data.addresses &&= mergeAddresses(acc, curr);
+        curr.data.orders &&= mergeOrders(acc, curr);
         curr.data.clubId &&= clubIdRule(acc, curr);
         curr.data.regSource &&= concatFieldRule(acc.data, curr.data, 'regSource');
         curr.data.cMarketingCode &&= concatFieldRule(acc.data, curr.data, 'cMarketingCode');
@@ -345,15 +323,26 @@ const toOneApplyingMergeRules = () => {
         curr.data.region = "EMEA";
         curr.data.countryDivision = "DE";
         curr.data.typeOfMember &&= typeOfMemberRule(typeOfMemberRegistry);
-        curr.data.addresses &&= mergeAddresses(acc, curr);
         return merge({}, acc, curr);
     }
 };
 
+/**
+ * 
+ * @param {*} accData  The accumulator data
+ * @param {*} currData  The current data
+ * @param {*} field  The field to concatenate
+ * @returns  The concatenated field
+ */
 const concatFieldRule = (accData, currData, field) => {
     return accData[field].includes(currData[field]) ? accData[field] : `${accData[field]}|${currData[field]}`
 }
 
+/**
+ * 
+ * @param {Map} registry  The registry of type of members
+ * @returns  The type of member
+ */
 const typeOfMemberRule = (registry) => {
     if (registry.has("DE NUTRICIA")) {
         return registry.get("DE NUTRICIA");
