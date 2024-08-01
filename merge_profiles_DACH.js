@@ -174,8 +174,34 @@ const toOneApplyingMergeRules = () => {
  * @returns  The concatenated field
  */
 const concatFieldRule = (accData, currData, field) => {
-    return accData[field].includes(currData[field]) ? accData[field] : `${accData[field]}|${currData[field]}`
+
+    if (accData[field] === 'Migrated') {
+        return accData[field];
+    }
+    
+    return accData[field].includes(currData[field]) ? accData[field] : `${accData[field]}|${currData[field]}`;
 }
+
+
+const normalizeField = (data, clubId) => {
+    if(data === 'HCCarer') {
+        data = "Carer";
+    } else if(data === 'HCPatient') {
+        data = "Patient";
+    } else if(data === undefined && (clubId === 'DE NUTRICIA' || clubId === 'DE LOPROFIN')) {
+        data = "Patient";
+    } else if([undefined, 'C'].includes(data) && (clubId === 'DE APTA' || clubId === 'DE MILUPA')) {
+        data = "Consumer";
+    } if (['OFFLINES', 'Offlines', 'OFFLINE'].includes(data)) {
+        return 'Offline';
+    } else if (['Hebnews Mailchinp', 'HebnewsMailchinp'].includes(data)) {
+        return 'Hebnews Mailchimp';
+    } else if(data === 'Migrated') {
+        return undefined;
+    }
+    return data;
+};
+
 
 /**
  * 
@@ -226,7 +252,7 @@ const optinsToEntitlementsOfDomainOptins = profile => {
 const mergeProfilesDACH = (profilesToMerge) => {
     let mergedProfile = profilesToMerge
         .sort(byIsLiteAndByLastUpdated)
-        .map(fillArrayWithSource)
+        .map(fillArrayWithSourceAndNormalizeFields)
         .map(optinsToEntitlementsOfDomainOptins)
         .reduce(toOneApplyingMergeRules(), {});
     mergedProfile.preferences.terms !== undefined ? mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile?.preferences?.terms?.TermsOfUse : null;
@@ -235,15 +261,18 @@ const mergeProfilesDACH = (profilesToMerge) => {
 };
 
 const createNewOutputFile = (type, index) => {
-    const fileName = type === 'json' ? `user-user-DE-merged_${index}.json` : `oldData_merged_profile.csv`;
+    const fileName = type === 'json' ? `user-DE-merged_${index}.json` : `oldData_merged_profile.csv`;
     const filePath = path.join(outputFolder, fileName);
     const fileStream = type === 'json' ? JSONStream.stringify('[\n', ',\n', '\n]\n') : csvStream();
     const outputStream = fs.createWriteStream(filePath);
     fileStream.pipe(outputStream);
     return { fileStream, outputStream };
 };
-const fillArrayWithSource = profile => {
+const fillArrayWithSourceAndNormalizeFields = profile => {
     const source = profile.domain;
+    profile.data.cMarketingCode &&= normalizeField(profile.data.cMarketingCode, profile.data.clubId);
+    profile.data.regSource &&= normalizeField(profile.data.regSource, profile.data.clubId);
+    profile.data.typeOfMember &&= normalizeField(profile.data.typeOfMember, profile.data.clubId);
     profile.data.children &&= profile.data.children.map(child => ({ ...child, source }));
     profile.data.addresses &&= profile.data.addresses.map(address => ({ ...address, source }));
     profile.data.orders &&= profile.data.orders.map(order => ({ ...order, source }));
