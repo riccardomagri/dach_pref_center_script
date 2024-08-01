@@ -225,10 +225,35 @@ const toOneApplyingMergeRules = () => {
  * @returns  The concatenated field
  */
 const concatFieldRule = (acc, curr, field) => {
+
+    if (accData[field] === 'Migrated') {
+        return accData[field];
+    }
+    
     return acc.data[field].includes(curr.data[field])
         ? acc.data[field]
-        : `${acc.data[field]}|${curr.data[field]}`
+        : `${acc.data[field]}|${curr.data[field]}`;
 }
+
+
+const normalizeField = (data, clubId) => {
+    if(data === 'HCCarer') {
+        data = "Carer";
+    } else if(data === 'HCPatient') {
+        data = "Patient";
+    } else if(data === undefined && (clubId === 'DE NUTRICIA' || clubId === 'DE LOPROFIN')) {
+        data = "Patient";
+    } else if([undefined, 'C'].includes(data) && (clubId === 'DE APTA' || clubId === 'DE MILUPA')) {
+        data = "Consumer";
+    } if (['OFFLINES', 'Offlines', 'OFFLINE'].includes(data)) {
+        return 'Offline';
+    } else if (['Hebnews Mailchinp', 'HebnewsMailchinp'].includes(data)) {
+        return 'Hebnews Mailchimp';
+    } else if(data === 'Migrated') {
+        return undefined;
+    }
+    return data;
+};
 
 
 /**
@@ -291,52 +316,38 @@ const optinsToEntitlementsOfDomainOptins = profile => {
     }
     return profile;
 };
-
-
 /**
- * 
- * @param {string} type - csv or json
- * @param {number} index 
- * @returns {Object.<string, Writable>} an object with two Writable streams
+ * @param {object[]} profilesToMerge
  */
+const mergeProfilesDACH = (profilesToMerge) => {
+    let mergedProfile = profilesToMerge
+        .sort(byIsLiteAndByLastUpdated)
+        .map(fillArrayWithSourceAndNormalizeFields)
+        .map(optinsToEntitlementsOfDomainOptins)
+        .reduce(toOneApplyingMergeRules(), {});
+    mergedProfile.preferences.terms !== undefined ? mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile?.preferences?.terms?.TermsOfUse : null;
+
+    return mergedProfile;
+};
+
 const createNewOutputFile = (type, index) => {
-    const fileName = type === 'json' ? `user-user-DE-merged_${index}.json` : `oldData_merged_profile.csv`;
+    const fileName = type === 'json' ? `user-DE-merged_${index}.json` : `oldData_merged_profile.csv`;
     const filePath = path.join(outputFolder, fileName);
     const fileStream = type === 'json' ? JSONStream.stringify('[\n', ',\n', '\n]\n') : csvStream();
     const outputStream = fs.createWriteStream(filePath);
     fileStream.pipe(outputStream);
     return { fileStream, outputStream };
 };
-
-/**
- * @param {Profile[]} profilesToMerge - a list of profiles to merge
- * @returns {Profile} the merged profile
- */
-const mergeProfilesDACH = (profilesToMerge) => {
-    let mergedProfile = profilesToMerge
-        .sort(byIsLiteAndByLastUpdated)
-        .map(fillArrayWithSource)
-        .map(optinsToEntitlementsOfDomainOptins)
-        .reduce(toOneApplyingMergeRules());
-    
-    if (mergedProfile?.preferences?.terms) {
-        mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile.preferences.terms.TermsOfUse;
-    }
-
-    return mergedProfile;
-};
-
-
-/**
- * 
- * @param {Profile} profile 
- * @returns {Profile} 
- */
-const fillArrayWithSource = profile => {
+const fillArrayWithSourceAndNormalizeFields = profile => {
     const source = profile.domain;
-    for (const arrayField of ['children', 'addresses', 'orders', 'abbandonatedCart', 'events']) {
-        profile.data[arrayField] &&= profile.data[arrayField].map(elem => ({ ...elem, source }));
-    }
+    profile.data.cMarketingCode &&= normalizeField(profile.data.cMarketingCode, profile.data.clubId);
+    profile.data.regSource &&= normalizeField(profile.data.regSource, profile.data.clubId);
+    profile.data.typeOfMember &&= normalizeField(profile.data.typeOfMember, profile.data.clubId);
+    profile.data.children &&= profile.data.children.map(child => ({ ...child, source }));
+    profile.data.addresses &&= profile.data.addresses.map(address => ({ ...address, source }));
+    profile.data.orders &&= profile.data.orders.map(order => ({ ...order, source }));
+    profile.data.abbandonatedCart &&= profile.data.abbandonatedCart.map(cart => ({ ...cart, source }));
+    profile.data.events &&= profile.data.events.map(event => ({ ...event, source }));
     return profile;
 }
 

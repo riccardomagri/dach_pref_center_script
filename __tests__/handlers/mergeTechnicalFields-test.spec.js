@@ -51,7 +51,7 @@ describe('DACH PREF merge technical fields', () => {
         const result = mergeProfilesDACH([Profile1, Profile2]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                regSource: 'Website|OFFLINE',
+                regSource: 'Website|Offline',
                 cMarketingCode: 'standard|WelcomePackage',
                 brand: "Aptamil|Loprofin"
             }),
@@ -86,8 +86,8 @@ describe('DACH PREF merge technical fields', () => {
         const result = mergeProfilesDACH([Profile1, Profile2, Profile3]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                regSource: 'Website|Phone|OFFLINE',
-                cMarketingCode: 'standard|Migrated|WelcomePackage',
+                regSource: 'Website|Phone|Offline',
+                cMarketingCode: 'standard|WelcomePackage',
                 brand: "Aptamil|Milupa|Loprofin"
             })
         }));
@@ -112,7 +112,7 @@ describe('DACH PREF merge technical fields', () => {
         const result = mergeProfilesDACH([Profile1, Profile2]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                regSource: 'OFFLINE',
+                regSource: 'Offline',
                 cMarketingCode: 'WelcomePackage',
                 brand: 'Loprofin'
             })
@@ -134,7 +134,7 @@ describe('DACH PREF merge technical fields', () => {
         const result = mergeProfilesDACH([Profile1, Profile2]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                regSource: 'OFFLINE',
+                regSource: 'Offline',
                 cMarketingCode: 'WelcomePackage',
                 brand: 'Loprofin'
             })
@@ -219,7 +219,7 @@ describe('DACH PREF merge technical fields', () => {
         const result = mergeProfilesDACH([Profile1, Profile2]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                typeOfMember: 'HCCarer'
+                typeOfMember: 'Carer'
             })
         }));
     });
@@ -241,7 +241,7 @@ describe('DACH PREF merge technical fields', () => {
         const result = mergeProfilesDACH([Profile1, Profile2]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                typeOfMember: 'HCCarer'
+                typeOfMember: 'Carer'
             })
         }));
     });
@@ -263,7 +263,7 @@ describe('DACH PREF merge technical fields', () => {
         const result = mergeProfilesDACH([Profile1, Profile2]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                typeOfMember: 'HCPatient'
+                typeOfMember: 'Patient'
             })
         }));
     });
@@ -286,7 +286,7 @@ describe('DACH PREF merge technical fields', () => {
         const result = mergeProfilesDACH([Profile1, Profile2]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                typeOfMember: 'HCPatient'
+                typeOfMember: 'Patient'
             })
         }));
     });
