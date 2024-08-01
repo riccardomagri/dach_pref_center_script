@@ -1,0 +1,208 @@
+{
+    "type": "object",
+    "properties": {
+        "UID": {
+            "type": "string",
+            "faker": "string.uuid"
+        },
+        "email": {
+            "type": "string",
+            "faker": "internet.email"
+        },
+        "data": {
+            "type": "object",
+            "properties": {
+                "clubId": {
+                    "type": "string",
+                    "faker": "custom.clubId"
+                },
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "faker": "string.uuid"
+                            },
+                            "firstName": {
+                                "type": "string",
+                                "faker": "person.firstName"
+                            },
+                            "dueDate": {
+                                "type": "string",
+                                "faker": "custom.date"
+                            },
+                            "isFirstBaby": {
+                                "type": "number",
+                                "enum": [
+                                    0,
+                                    1
+                                ]
+                            }
+                        }
+                    }
+                },
+                "addresses": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "faker": "string.uuid"
+                            },
+                            "street": {
+                                "type": "string",
+                                "faker": "location.street"
+                            },
+                            "city": {
+                                "type": "string",
+                                "faker": "location.city"
+                            },
+                            "zipCode": {
+                                "type": "string",
+                                "faker": "location.zipCode"
+                            },
+                            "countryISO2C": {
+                                "type": "string",
+                                "faker": "location.country"
+                            }
+                        }
+                    }
+                },
+                "orders": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "faker": "string.uuid"
+                            },
+                            "orderNumber": {
+                                "type": "string",
+                                "faker": {
+                                    "number.int": [
+                                        999999999
+                                    ]
+                                }
+                            },
+                            "orderDate": {
+                                "type": "string",
+                                "faker": "custom.datetime"
+                            },
+                            "orderTotal": {
+                                "type": "number",
+                                "faker": {
+                                    "number.int": [
+                                        10000
+                                    ]
+                                }
+                            },
+                            "orderCurrency": {
+                                "type": "string",
+                                "faker": "finance.currencyCode"
+                            },
+                            "orderStatus": {
+                                "type": "string",
+                                "enum": [
+                                    "Shipped",
+                                    "Delivered",
+                                    "Cancelled"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "typeOfMember": {
+                    "type": "string",
+                    "faker" : "custom.typeOfMember"
+                },
+                "division": {
+                    "type": "string",
+                    "enum": [
+                        "SN"
+                    ]
+                },
+                "region": {
+                    "type": "string",
+                    "enum": [
+                        "EMEA"
+                    ]
+                },
+                "countryDivision": {
+                    "type": "string",
+                    "enum": [
+                        "DE"
+                    ]
+                },
+                "lastSystemUpdatedProfile": {
+                    "type": "string",
+                    "faker": "custom.datetime"
+                },
+                "created": {
+                    "type": "string",
+                    "faker": "custom.datetime"
+                }
+            },
+            "required": [
+                "clubId",
+                "typeOfMember",
+                "division",
+                "region",
+                "countryDivision",
+                "lastSystemUpdatedProfile",
+                "created"
+            ]
+        },
+        "preferences": {
+            "type": "object",
+            "properties": {
+                "terms": {
+                    "type": "object",
+                    "properties": {
+                        "TermsOfUse": {
+                            "type": "object",
+                            "properties": {
+                                "isConsentGranted": {
+                                    "type": "boolean"
+                                }
+                            },
+                            "required": [
+                                "isConsentGranted"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "TermsOfUse"
+                    ]
+                }
+            },
+            "required": [
+                "terms"
+            ]
+        },
+        "isRegistered": {
+            "type": "boolean",
+            "faker": "custom.isLite"
+        },
+        "hasLiteAccount": {
+            "type": "boolean",
+            "faker": "custom.isLite"
+        },
+        "lastUpdated": {
+            "type": "string",
+            "faker": "custom.datetime"
+        }
+    },
+    "required": [
+        "UID",
+        "email",
+        "data",
+        "preferences",
+        "isRegistered",
+        "hasLiteAccount",
+        "lastUpdated"
+    ]
+}
