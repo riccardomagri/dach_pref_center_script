@@ -5,6 +5,7 @@ const csvStream = require('csv-write-stream');
 const JSONStream = require('JSONStream');
 const es = require('event-stream');
 const merge = require('lodash.merge');
+const { v4: uuidv4 } = require('uuid');
 
 const inputFolder = './input/';
 const outputFolder = './output/';
@@ -92,13 +93,6 @@ const createOptinPreference = (mostRecentConsent) => ({
  * @param {Profile[]} originalProfiles 
  */
 const writeToFile = async (outputCsvStreamWriter, mergedJsonStreamWriter, mergedProfile, originalProfiles) => {
-    outputCsvStreamWriter.write({
-        old_UID: mergedProfile?.UID,
-        old_clubId: mergedProfile?.data?.clubId,
-        new_UID: mergedProfile?.UID,
-        new_clubId: mergedProfile?.data?.clubId,
-        email: mergedProfile?.profile?.email.toLowerCase()
-    });
 
     for (const otherProfile of originalProfiles) {
         outputCsvStreamWriter.write({
@@ -128,7 +122,7 @@ const writeToFile = async (outputCsvStreamWriter, mergedJsonStreamWriter, merged
  */
 const mergeChildren = (accDataChildren, currDataChildren) => {
 
-    let mergedChildren = [...accDataChildren.data.children];
+    let mergedChildren = accDataChildren.data.children ? [...accDataChildren.data.children] : [];
     const lastUpdated1 = new Date(accDataChildren.lastUpdated);
     const lastUpdated2 = new Date(currDataChildren.lastUpdated);
     currDataChildren.data.children.forEach(child2 => {
@@ -176,7 +170,13 @@ const mergeChildren = (accDataChildren, currDataChildren) => {
  * @returns {Object[]} 
  */
 const concatArrays = (acc, curr, field) => {
+    if(acc.data[field] && curr.data[field]) {
     return [...acc.data[field], ...curr.data[field]];
+    } else if(acc.data[field]) {
+        return acc.data[field];
+    } else if(curr.data[field]) {
+        return curr.data[field];
+    }
 }
 
 
@@ -230,7 +230,7 @@ const concatFieldRule = (acc, curr, field) => {
         return acc.data[field];
     }
     
-    return acc.data[field].includes(curr.data[field])
+    return acc.data[field]?.includes(curr.data[field])
         ? acc.data[field]
         : `${acc.data[field]}|${curr.data[field]}`;
 }
@@ -311,6 +311,8 @@ const optinsToEntitlementsOfDomainOptins = profile => {
     const optinKey = clubMapping[profile.data.clubId];
     if (optinKey) {
         profile.preferences[optinKey] = createOptinPreference(getMostRecentConsent(profile.preferences));
+    } else {
+        profile.preferences[optinKey] = createOptinPreference(getMostRecentConsent(profile.preferences));
     }
     for (const entitlement in profile.preferences) {
         if (entitlement !== 'terms' && entitlement !== optinKey) {
@@ -335,6 +337,7 @@ const mergeProfilesDACH = (profilesToMerge) => {
         .map(optinsToEntitlementsOfDomainOptins)
         .reduce(toOneApplyingMergeRules());
     mergedProfile.preferences.terms !== undefined ? mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile?.preferences?.terms?.TermsOfUse : null;
+    mergedProfile.UID = uuidv4();
 
     return mergedProfile;
 };
@@ -360,15 +363,20 @@ const createNewOutputFile = (type, index) => {
  * @returns {Profile} 
  */
 const fillArrayWithSourceAndNormalizeFields = profile => {
-    const source = profile.domain;
-    profile.data.cMarketingCode &&= normalizeField(profile.data.cMarketingCode, profile.data.clubId);
-    profile.data.regSource &&= normalizeField(profile.data.regSource, profile.data.clubId);
-    profile.data.typeOfMember &&= normalizeField(profile.data.typeOfMember, profile.data.clubId);
-    profile.data.children &&= profile.data.children.map(child => ({ ...child, source }));
-    profile.data.addresses &&= profile.data.addresses.map(address => ({ ...address, source }));
-    profile.data.orders &&= profile.data.orders.map(order => ({ ...order, source }));
-    profile.data.abbandonatedCart &&= profile.data.abbandonatedCart.map(cart => ({ ...cart, source }));
-    profile.data.events &&= profile.data.events.map(event => ({ ...event, source }));
+    const source = profile.data.clubId.replace(' ', '');
+    if (profile.data) {
+        profile.data.cMarketingCode &&= normalizeField(profile.data.cMarketingCode, profile.data.clubId);
+        profile.data.regSource &&= normalizeField(profile.data.regSource, profile.data.clubId);
+        profile.data.typeOfMember &&= normalizeField(profile.data.typeOfMember, profile.data.clubId);
+        profile.data.preferredLanguage &&= 'de_de';
+
+        const arrayFields = ['addresses', 'orders', 'children', 'events', 'surveys', 'abandonedcarts'];
+        arrayFields.forEach(field => {
+            if (profile.data[field]) {
+                profile.data[field] &&= profile.data[field]?.map?.(item => ({ ...item, source }));
+            }
+        });
+    }
     return profile;
 }
 
@@ -387,7 +395,7 @@ const mergeProfiles = async () => {
 
     let { fileStream: mergedJsonStreamWriter, outputStream: mergedOutput } = createNewOutputFile('json', fileIndex);
     let { fileStream: outputCsvStreamWriter, outputStream: oldDataOutput } = createNewOutputFile('csv', fileIndex);
-
+    console.log("Numero di email diverse",profilesByEmail.size);
     for (const [email, originalProfiles] of profilesByEmail) {
         if (userCount >= MAX_USERS_PER_FILE) {
             console.log(`Processed ${userCount} users, creating new output JSON file.`);
@@ -450,10 +458,10 @@ const readAndProcessFiles = async () => {
             const jsonParser = JSONStream.parse('*');
             readStream.pipe(jsonParser)
                 .pipe(es.mapSync((jsonObject) => {
-                    if (!profilesByEmail.has(jsonObject.profile.email.toLowerCase())) {
-                        profilesByEmail.set(jsonObject.profile.email.toLowerCase(), []);
+                    if (!profilesByEmail.has(jsonObject.profile?.email?.toLowerCase())) {
+                        profilesByEmail.set(jsonObject.profile?.email?.toLowerCase(), []);
                     }
-                    profilesByEmail.get(jsonObject.profile.email.toLowerCase()).push(jsonObject);
+                    profilesByEmail.get(jsonObject.profile?.email?.toLowerCase()).push(jsonObject);
                 }))
                 .on('end', resolve)
                 .on('error', reject);

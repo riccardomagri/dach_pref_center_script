@@ -5,8 +5,8 @@ const { expect } = require('@jest/globals');
 describe('DACH PREF merge Children', () => {
     test('Test 2 profile with children field filled and DOB of the two > 9 months', () => {
         const Profile1 = createTestProfileFull({
-            domain: 'DEAPTA',
             data: {
+                clubId: 'DE APTA',
                 children: [
                     {
                         id: '123456',
@@ -18,8 +18,8 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileFull({
-            domain: 'DEMILUPA',
             data: {
+                clubId: 'DE MILUPA',
                 children: [
                     {
                         id: '1234567',
@@ -54,7 +54,6 @@ describe('DACH PREF merge Children', () => {
     });
     test('Test 2 profile with children field filled and DOB of the two < 9 months', () => {
         const Profile1 = createTestProfileFull({
-            domain: 'DEAPTA',
             data: {
                 clubId: 'DE APTA',
                 children: [
@@ -68,7 +67,6 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileFull({
-            domain: 'DEMILUPA',
             data: {
                 clubId: 'DE MILUPA',
                 children: [
@@ -98,8 +96,8 @@ describe('DACH PREF merge Children', () => {
     });
     test('Test 2 profile with children field filled and DOB of the two > 9 months and 1 profile with dueDate', () => {
         const Profile1 = createTestProfileFull({
-            domain: 'DEAPTA',
             data: {
+                clubId: 'DE APTA',
                 children: [
                     {
                         id: '123456',
@@ -111,8 +109,8 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileFull({
-            domain: 'DEMILUPA',
             data: {
+                clubId: 'DE MILUPA',
                 children: [
                     {
                         id: '1234567',
@@ -124,8 +122,8 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-02-01T00:00:00.000Z'
         });
         const Profile3 = createTestProfileFull({
-            domain: 'DELOPROFIN',
             data: {
+                clubId: 'DE LOPROFIN',
                 children: [
                     {
                         id: '12345678',
@@ -160,8 +158,8 @@ describe('DACH PREF merge Children', () => {
     });
     test('Test 2 profile with children field filled and DOB of the two > 9 months and 1 profile with dueDate and 1 profile with DOB < 9 months', () => {
         const Profile1 = createTestProfileFull({
-            domain: 'DEAPTA',
             data: {
+                clubId: 'DE APTA',
                 children: [
                     {
                         id: '123456',
@@ -173,8 +171,8 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileFull({
-            domain: 'DEMILUPA',
             data: {
+                clubId: 'DE MILUPA',
                 children: [
                     {
                         id: '1234567',
@@ -186,8 +184,8 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-02-01T00:00:00.000Z'
         });
         const Profile3 = createTestProfileFull({
-            domain: 'DELOPROFIN',
             data: {
+                clubId: 'DE LOPROFIN',
                 children: [
                     {
                         id: '12345678',
@@ -199,8 +197,8 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-03-01T00:00:00.000Z'
         });
         const Profile4 = createTestProfileFull({
-            domain: 'DENUTRICIA',
             data: {
+                clubId: 'DE NUTRICIA',
                 children: [
                     {
                         id: '123456789',
@@ -236,8 +234,8 @@ describe('DACH PREF merge Children', () => {
     });
     test('Test 2 profiles with children field filled and dueDate of the two < 9 months and 1 profile with dueDate and 1 profile with DOB > 9 months', () => {
         const Profile1 = createTestProfileFull({
-            domain: 'DEAPTA',
             data: {
+                clubId: 'DE APTA',
                 children: [
                     {
                         id: '123456',
@@ -249,8 +247,8 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileFull({
-            domain: 'DEMILUPA',
             data: {
+                clubId: 'DE MILUPA',
                 children: [
                     {
                         id: '1234567',
@@ -262,8 +260,8 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-02-01T00:00:00.000Z'
         });
         const Profile3 = createTestProfileFull({
-            domain: 'DELOPROFIN',
             data: {
+                clubId: 'DE LOPROFIN',
                 children: [
                     {
                         id: '12345678',
@@ -298,8 +296,8 @@ describe('DACH PREF merge Children', () => {
     });
     test('Test 2 profiles with children field filled and dueDate of the two < 9 months and 1 profile with dueDate and 1 profile with DOB < 9 months', () => {
         const Profile1 = createTestProfileFull({
-            domain: 'DEAPTA',
             data: {
+                clubId: 'DE APTA',
                 children: [
                     {
                         id: '123456',
@@ -311,8 +309,8 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileFull({
-            domain: 'DEMILUPA',
             data: {
+                clubId: 'DE MILUPA',
                 children: [
                     {
                         id: '1234567',
@@ -324,8 +322,8 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-02-01T00:00:00.000Z'
         });
         const Profile3 = createTestProfileFull({
-            domain: 'DELOPROFIN',
             data: {
+                clubId: 'DE LOPROFIN',
                 children: [
                     {
                         id: '12345678',
@@ -337,8 +335,8 @@ describe('DACH PREF merge Children', () => {
             lastUpdated: '2021-03-01T00:00:00.000Z'
         });
         const Profile4 = createTestProfileFull({
-            domain: 'DENUTRICIA',
             data: {
+                clubId: 'DE NUTRICIA',
                 children: [
                     {
                         id: '123456789',

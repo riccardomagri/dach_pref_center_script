@@ -7,7 +7,6 @@ expect.extend(matchers);
 describe('DACH PREF merge orders', () => {
     test('Test orders field with 2 profiles with different orders', () => {
         const Profile1 = createTestProfileFull({
-            domain: 'DENUTRICIA',
             data: {
                 clubId: 'DE NUTRICIA',
                 orders: [
@@ -24,7 +23,7 @@ describe('DACH PREF merge orders', () => {
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileFull({
-            domain: 'DELOPROFIN',
+            clubId: 'DELOPROFIN',
             data: {
                 clubId: 'DE LOPROFIN',
                 orders: [
@@ -68,7 +67,6 @@ describe('DACH PREF merge orders', () => {
     });
     test('Test orders field with 3 profiles with different orders', () => {
         const Profile1 = createTestProfileFull({
-            domain: 'DENUTRICIA',
             data: {
                 clubId: 'DE NUTRICIA',
                 orders: [
@@ -85,7 +83,6 @@ describe('DACH PREF merge orders', () => {
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileFull({
-            domain: 'DELOPROFIN',
             data: {
                 clubId: 'DE LOPROFIN',
                 orders: [
@@ -102,7 +99,7 @@ describe('DACH PREF merge orders', () => {
             lastUpdated: '2021-02-01T00:00:00.000Z'
         });
         const Profile3 = createTestProfileFull({
-            domain: 'DEAPTA',
+            clubId: 'DEAPTA',
             data: {
                 clubId: 'DE APTA',
                 orders: [

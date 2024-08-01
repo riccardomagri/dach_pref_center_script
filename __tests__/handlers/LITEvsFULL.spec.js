@@ -11,18 +11,21 @@ describe('DACH PREF', () => {
         const mostRecent = createTestProfileLite({ lastUpdated: '2021-02-01T00:00:00.000Z'});
         const lessRecent = createTestProfileLite({ lastUpdated: '2021-01-01T00:00:00.000Z' });
         const result = mergeProfilesDACH([cloneDeep(mostRecent), cloneDeep(lessRecent)]);
+        delete mostRecent.UID; // UID is generated randomly
         expect(result).toMatchObject(mostRecent);
     });  
     test('FULL vs FULL', () => {
         const mostRecent = createTestProfileFull({ lastUpdated: '2021-02-01T00:00:00.000Z'});
         const lessRecent = createTestProfileFull({ lastUpdated: '2021-01-01T00:00:00.000Z' });
         const result = mergeProfilesDACH([cloneDeep(mostRecent), cloneDeep(lessRecent)]);
+        delete mostRecent.UID; // UID is generated randomly
         expect(result).toMatchObject(mostRecent);
     });
     test('LITE vs FULL', () => {
         const mostRecentLITE = createTestProfileLite({ lastUpdated: '2021-02-01T00:00:00.000Z'});
         const lessRecentFULL = createTestProfileFull({ lastUpdated: '2021-01-01T00:00:00.000Z' });
         const result = mergeProfilesDACH([cloneDeep(mostRecentLITE), cloneDeep(lessRecentFULL)]);
+        delete lessRecentFULL.UID; // UID is generated randomly
         expect(result).toMatchObject(lessRecentFULL);
     });
     test('LITE vs LITE vs FULL', () => {
@@ -30,6 +33,7 @@ describe('DACH PREF', () => {
         const lessRecentLITE = createTestProfileLite({ lastUpdated: '2021-03-01T00:00:00.000Z' });
         const lessRecentFULL = createTestProfileFull({ lastUpdated: '2021-01-01T00:00:00.000Z' });
         const result = mergeProfilesDACH([cloneDeep(mostRecentLITE), cloneDeep(lessRecentLITE), cloneDeep(lessRecentFULL)]);
+        delete lessRecentFULL.UID; // UID is generated randomly
         expect(result).toMatchObject(lessRecentFULL);
     });
     test('FULL vs LITE vs FULL', () => {
@@ -37,6 +41,7 @@ describe('DACH PREF', () => {
         const lessRecentLITE = createTestProfileLite({ lastUpdated: '2021-03-01T00:00:00.000Z' });
         const lessRecentFULL = createTestProfileFull({ lastUpdated: '2021-01-01T00:00:00.000Z' });
         const result = mergeProfilesDACH([cloneDeep(mostRecentFULL), cloneDeep(lessRecentLITE), cloneDeep(lessRecentFULL)]);
+        delete mostRecentFULL.UID; // UID is generated randomly
         expect(result).toMatchObject(mostRecentFULL);
     });
     test('FULL with missing field vs LITE with filled field', () => {

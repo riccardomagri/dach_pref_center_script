@@ -308,6 +308,24 @@ describe('DACH PREF merge technical fields', () => {
             })
         }));
     });
+    test('Test preferredLanguage field with 1 profiles one filled and one without', () => {
+        const Profile1 = createTestProfileFull({
+            data: {
+                preferredLanguage: 'German'
+            },
+            lastUpdated: '2021-02-01T00:00:00.000Z'
+        });
+        const Profile2 = createTestProfileFull({
+            data: {},
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
+                preferredLanguage: 'de_de'
+            })
+        }));
+    });
     test('Test preferredLanguage field with 2 profiles without', () => {
         const Profile1 = createTestProfileFull({
             data: {},

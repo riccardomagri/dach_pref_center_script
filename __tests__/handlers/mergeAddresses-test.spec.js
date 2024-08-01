@@ -7,7 +7,6 @@ expect.extend(matchers);
 describe('DACH PREF merge addresses', () => {
     test('Test addresses field with 2 profiles with different addresses', () => {
         const Profile1 = createTestProfileFull({
-            domain: 'DENUTRICIA',
             data: {
                 clubId: 'DE NUTRICIA',
                 addresses: [
@@ -23,7 +22,6 @@ describe('DACH PREF merge addresses', () => {
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileLite({
-            domain: 'DELOPROFIN',
             data: {
                 clubId: 'DE LOPROFIN',
                 addresses: [
@@ -64,7 +62,6 @@ describe('DACH PREF merge addresses', () => {
     });
     test('Test addresses field with 1 profile with address and 1 profile without address', () => {
         const Profile1 = createTestProfileFull({
-            domain: 'DENUTRICIA',
             data: {
                 clubId: 'DE NUTRICIA',
                 addresses: [
@@ -80,7 +77,6 @@ describe('DACH PREF merge addresses', () => {
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileLite({
-            domain: 'DELOPROFIN',
             data: {
                 clubId: 'DE LOPROFIN'
             },
@@ -104,7 +100,6 @@ describe('DACH PREF merge addresses', () => {
     });
     test('Test addresses field with 1 profile with address and 1 profile with empty addresses and 1 profile with different address', () => {
         const Profile1 = createTestProfileFull({
-            domain: 'DENUTRICIA',
             data: {
                 clubId: 'DE NUTRICIA',
                 addresses: [
@@ -120,7 +115,6 @@ describe('DACH PREF merge addresses', () => {
             lastUpdated: '2021-01-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileLite({
-            domain: 'DELOPROFIN',
             data: {
                 clubId: 'DE LOPROFIN',
                 addresses: []
@@ -128,7 +122,6 @@ describe('DACH PREF merge addresses', () => {
             lastUpdated: '2021-02-01T00:00:00.000Z'
         });
         const Profile3 = createTestProfileLite({
-            domain: 'DELOPROFIN',
             data: {
                 clubId: 'DE LOPROFIN',
                 addresses: [
