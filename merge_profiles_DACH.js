@@ -170,11 +170,11 @@ const mergeChildren = (accDataChildren, currDataChildren) => {
  * @returns {Object[]} 
  */
 const concatArrays = (acc, curr, field) => {
-    if(acc.data[field] && curr.data[field]) {
-    return [...acc.data[field], ...curr.data[field]];
-    } else if(acc.data[field]) {
+    if (Array.isArray(acc.data[field]) && Array.isArray(curr.data[field])) {
+        return [...acc.data[field], ...curr.data[field]];
+    } else if (acc.data[field]) {
         return acc.data[field];
-    } else if(curr.data[field]) {
+    } else if (curr.data[field]) {
         return curr.data[field];
     }
 }
@@ -209,9 +209,6 @@ const toOneApplyingMergeRules = () => {
         curr.data.regSource &&= concatFieldRule(acc, curr, 'regSource');
         curr.data.cMarketingCode &&= concatFieldRule(acc, curr, 'cMarketingCode');
         curr.data.brand &&= concatFieldRule(acc, curr, 'brand');
-        curr.data.division = "SN";
-        curr.data.region = "EMEA";
-        curr.data.countryDivision = "DE";
         curr.data.typeOfMember &&= ruler.applyTypeOfMemberRule(acc, curr);
         return merge({}, acc, curr);
     }
@@ -226,13 +223,10 @@ const toOneApplyingMergeRules = () => {
  */
 const concatFieldRule = (acc, curr, field) => {
 
-    if (acc.data[field] === 'Migrated') {
-        return acc.data[field];
-    }
-    
-    return acc.data[field]?.includes(curr.data[field])
-        ? acc.data[field]
-        : `${acc.data[field]}|${curr.data[field]}`;
+    const uniqueValues = new Set(acc.data[field]?.split("|"))
+    uniqueValues.add(curr.data[field])
+    return Array.from(uniqueValues.values()).filter(value => value).join("|")
+
 }
 
 
@@ -301,6 +295,17 @@ const clubIdRule = (acc, curr) => {
     }
 }
 
+/**
+ * 
+ * @param {Profile} profile 
+ * @returns {Profile} 
+ */
+const normalizeFields = profile => {
+    profile.data.cMarketingCode &&= normalizeField(profile.data.cMarketingCode, profile.data.clubId);
+    profile.data.regSource &&= normalizeField(profile.data.regSource, profile.data.clubId);
+    profile.data.typeOfMember &&= normalizeField(profile.data.typeOfMember, profile.data.clubId);
+    return profile;
+};
 
 /**
  * 
@@ -311,9 +316,8 @@ const optinsToEntitlementsOfDomainOptins = profile => {
     const optinKey = clubMapping[profile.data.clubId];
     if (optinKey) {
         profile.preferences[optinKey] = createOptinPreference(getMostRecentConsent(profile.preferences));
-    } else {
-        profile.preferences[optinKey] = createOptinPreference(getMostRecentConsent(profile.preferences));
-    }
+    } 
+
     for (const entitlement in profile.preferences) {
         if (entitlement !== 'terms' && entitlement !== optinKey) {
             if (profile.preferences[entitlement].isConsentGranted) {
@@ -325,6 +329,19 @@ const optinsToEntitlementsOfDomainOptins = profile => {
     return profile;
 };
 
+/**
+ * @param {Profile} mergedProfile 
+ */
+const completeMergedProfileData = (mergedProfile) => {
+    if (mergedProfile.preferences?.terms?.TermsOfUse) {
+        mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile.preferences.terms.TermsOfUse;
+    }
+    mergedProfile.data.preferredLanguage &&= 'de_de';
+    mergedProfile.data.division = "SN";
+    mergedProfile.data.region = "EMEA";
+    mergedProfile.data.countryDivision = "DE";
+    mergedProfile.UID = uuidv4();
+}
 
 /**
  * @param {Profile[]} profilesToMerge - a list of profile to merge, each profile has different clubId
@@ -333,11 +350,12 @@ const optinsToEntitlementsOfDomainOptins = profile => {
 const mergeProfilesDACH = (profilesToMerge) => {
     let mergedProfile = profilesToMerge
         .sort(byIsLiteAndByLastUpdated)
-        .map(fillArrayWithSourceAndNormalizeFields)
+        .map(normalizeFields)
+        .map(fillArrayWithSource)
         .map(optinsToEntitlementsOfDomainOptins)
         .reduce(toOneApplyingMergeRules());
-    mergedProfile.preferences.terms !== undefined ? mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile?.preferences?.terms?.TermsOfUse : null;
-    mergedProfile.UID = uuidv4();
+
+    completeMergedProfileData(mergedProfile);
 
     return mergedProfile;
 };
@@ -362,13 +380,9 @@ const createNewOutputFile = (type, index) => {
  * @param {Profile} profile 
  * @returns {Profile} 
  */
-const fillArrayWithSourceAndNormalizeFields = profile => {
+const fillArrayWithSource = profile => {
     const source = profile.data.clubId.replace(' ', '');
     if (profile.data) {
-        profile.data.cMarketingCode &&= normalizeField(profile.data.cMarketingCode, profile.data.clubId);
-        profile.data.regSource &&= normalizeField(profile.data.regSource, profile.data.clubId);
-        profile.data.typeOfMember &&= normalizeField(profile.data.typeOfMember, profile.data.clubId);
-        profile.data.preferredLanguage &&= 'de_de';
 
         const arrayFields = ['addresses', 'orders', 'children', 'events', 'surveys', 'abandonedcarts'];
         arrayFields.forEach(field => {
@@ -487,4 +501,6 @@ module.exports = {
     readAndProcessFiles,
     mergeProfilesDACH
 };
+
+
 
