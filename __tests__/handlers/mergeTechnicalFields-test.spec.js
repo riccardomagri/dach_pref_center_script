@@ -1,6 +1,41 @@
 const { mergeProfilesDACH } = require('../../merge_profiles_DACH.js');
 const { createTestProfileFull, createTestProfileLite } = require('../utility.js');
 const { expect } = require('@jest/globals');
+const matchers = require('jest-extended');
+expect.extend(matchers);
+expect.extend({
+    toIncludeSameMembersIfSplittedOn: (actual, separator, expectedArray) => {
+        if (typeof actual !== 'string') {
+            throw new TypeError('These must be of type string!');
+        }
+
+        const actualArray = actual.split(separator)
+        const pass = actualArray.length === expectedArray.length
+            && actualArray.every(elem => expectedArray.includes(elem));
+        if (pass) {
+            return {
+                message: () =>
+                    `expected ${this.utils.printReceived(
+                        actual,
+                    )} when splitted on ${separator} to include the same members of ${this.utils.printExpected(
+                        `${expectedArray}`,
+                    )}`,
+                pass: true,
+            };
+        } else {
+            return {
+                message: () =>
+                    `expected ${this.utils.printReceived(
+                        actual,
+                    )} when splitted on ${separator} to include the same members of ${this.utils.printExpected(
+                        `${expectedArray}`,
+                    )}`,
+                pass: false,
+            };
+        }
+    }
+}
+)
 
 describe('DACH PREF merge technical fields', () => {
     test('Profile1 FULL vs Profile2 LITE', () => {
@@ -31,7 +66,7 @@ describe('DACH PREF merge technical fields', () => {
             lastUpdated: '2021-02-01T00:00:00.000Z'
         }));
     });
-    test('Concatenation of technical fields', () => {
+    test('mytest'/*'Concatenation of technical fields'*/, () => {
         const Profile1 = createTestProfileFull({
             data: {
                 regSource: 'OFFLINE',
@@ -51,21 +86,21 @@ describe('DACH PREF merge technical fields', () => {
         const result = mergeProfilesDACH([Profile1, Profile2]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                regSource: 'Website|Offline',
-                cMarketingCode: 'standard|WelcomePackage',
-                brand: "Aptamil|Loprofin"
+                regSource: expect.toIncludeSameMembersIfSplittedOn('|',['Website','Offline']),
+                cMarketingCode: expect.toIncludeSameMembersIfSplittedOn('|',['standard','WelcomePackage']),
+                brand: expect.toIncludeSameMembersIfSplittedOn('|',['Aptamil','Loprofin'])
             }),
             lastUpdated: '2021-02-01T00:00:00.000Z'
         }));
     });
-    test('Concatenation of technical fields with 3 profiles', () => {
+    test('Concatenation of technical fields with 3 profiles with cMarketingCode "Migrated"', () => {
         const Profile1 = createTestProfileFull({
             data: {
                 regSource: 'OFFLINE',
                 cMarketingCode: 'WelcomePackage',
                 brand: 'Loprofin',
             },
-            lastUpdated: '2021-02-01T00:00:00.000Z'
+            lastUpdated: '2021-03-01T00:00:00.000Z'
         });
         const Profile2 = createTestProfileLite({
             data: {
@@ -73,7 +108,7 @@ describe('DACH PREF merge technical fields', () => {
                 cMarketingCode: 'standard',
                 brand: "Aptamil"
             },
-            lastUpdated: '2021-01-01T00:00:00.000Z'
+            lastUpdated: '2021-02-01T00:00:00.000Z'
         });
         const Profile3 = createTestProfileLite({
             data: {
@@ -81,14 +116,49 @@ describe('DACH PREF merge technical fields', () => {
                 cMarketingCode: 'Migrated',
                 brand: "Milupa"
             },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const result = mergeProfilesDACH([Profile1, Profile2, Profile3]);
+        expect(result).toEqual(expect.objectContaining({
+            data: expect.objectContaining({
+                regSource: expect.toIncludeSameMembersIfSplittedOn('|',['Phone','Website','Offline']),
+                cMarketingCode: expect.toIncludeSameMembersIfSplittedOn('|',['standard','WelcomePackage']),
+                brand: expect.toIncludeSameMembersIfSplittedOn('|',['Milupa','Aptamil','Loprofin'])
+            })
+        }));
+    });
+
+    test('Concatenation of technical fields with 3 profiles with cMarketingCode "Migrated" (inverted order)', () => {
+        const Profile1 = createTestProfileFull({
+            data: {
+                regSource: 'OFFLINE',
+                cMarketingCode: 'Migrated',
+                brand: 'Loprofin',
+            },
+            lastUpdated: '2021-01-01T00:00:00.000Z'
+        });
+        const Profile2 = createTestProfileLite({
+            data: {
+                regSource: 'Website',
+                cMarketingCode: 'standard',
+                brand: "Aptamil"
+            },
+            lastUpdated: '2021-02-01T00:00:00.000Z'
+        });
+        const Profile3 = createTestProfileLite({
+            data: {
+                regSource: 'Phone',
+                cMarketingCode: 'WelcomePackage',
+                brand: "Milupa"
+            },
             lastUpdated: '2021-03-01T00:00:00.000Z'
         });
         const result = mergeProfilesDACH([Profile1, Profile2, Profile3]);
         expect(result).toEqual(expect.objectContaining({
             data: expect.objectContaining({
-                regSource: 'Website|Phone|Offline',
-                cMarketingCode: 'standard|WelcomePackage',
-                brand: "Aptamil|Milupa|Loprofin"
+                regSource: expect.toIncludeSameMembersIfSplittedOn('|',['Website','Phone','Offline']),
+                cMarketingCode: expect.toIncludeSameMembersIfSplittedOn('|',['standard','WelcomePackage']),
+                brand: expect.toIncludeSameMembersIfSplittedOn('|',['Aptamil','Milupa','Loprofin'])
             })
         }));
     });
