@@ -255,7 +255,7 @@ const mergeProfilesDACH = (profilesToMerge) => {
         .map(fillArrayWithSourceAndNormalizeFields)
         .map(optinsToEntitlementsOfDomainOptins)
         .reduce(toOneApplyingMergeRules(), {});
-    mergedProfile.preferences.terms !== undefined ? mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile?.preferences?.terms?.TermsOfUse : null;
+    mergedProfile.preferences.terms !== undefined ? mergedProfile.preferences.terms.TermsOfUse_v2 = createOptinPreference() : null;
 
     return mergedProfile;
 };
