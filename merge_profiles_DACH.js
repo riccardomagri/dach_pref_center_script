@@ -122,9 +122,9 @@ const writeToFile = async (outputCsvStreamWriter, mergedJsonStreamWriter, merged
  * I figli vengono combinati in base alla data di nascita o alla data di parto 
  * Se la differenza tra le date è inferiore a 9 mesi, il figlio più giovane viene scartato
  * Se un figlio ha una data di nascita e l'altro ha una data di parto, la data di parto viene considerata come data di nascita
- * @param {Object[]} accDataChildren
- * @param {Object[]} currDataChildren
- * @return {Object[]}
+ * @param {Profile} accDataChildren
+ * @param {Profile} currDataChildren
+ * @return {Object[]} children
  */
 const mergeChildren = (accDataChildren, currDataChildren) => {
 
@@ -226,8 +226,8 @@ const toOneApplyingMergeRules = () => {
  */
 const concatFieldRule = (acc, curr, field) => {
 
-    if (accData[field] === 'Migrated') {
-        return accData[field];
+    if (acc.data[field] === 'Migrated') {
+        return acc.data[field];
     }
     
     return acc.data[field].includes(curr.data[field])
@@ -236,6 +236,12 @@ const concatFieldRule = (acc, curr, field) => {
 }
 
 
+/**
+ * 
+ * @param {string} data 
+ * @param {string} clubId 
+ * @returns 
+ */
 const normalizeField = (data, clubId) => {
     if(data === 'HCCarer') {
         data = "Carer";
@@ -316,20 +322,29 @@ const optinsToEntitlementsOfDomainOptins = profile => {
     }
     return profile;
 };
+
+
 /**
- * @param {object[]} profilesToMerge
+ * @param {Profile[]} profilesToMerge - a list of profile to merge, each profile has different clubId
+ * @returns {Profile} the merged profile
  */
 const mergeProfilesDACH = (profilesToMerge) => {
     let mergedProfile = profilesToMerge
         .sort(byIsLiteAndByLastUpdated)
         .map(fillArrayWithSourceAndNormalizeFields)
         .map(optinsToEntitlementsOfDomainOptins)
-        .reduce(toOneApplyingMergeRules(), {});
+        .reduce(toOneApplyingMergeRules());
     mergedProfile.preferences.terms !== undefined ? mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile?.preferences?.terms?.TermsOfUse : null;
 
     return mergedProfile;
 };
 
+/**
+ * 
+ * @param {string} type 
+ * @param {number} index 
+ * @returns 
+ */
 const createNewOutputFile = (type, index) => {
     const fileName = type === 'json' ? `user-DE-merged_${index}.json` : `oldData_merged_profile.csv`;
     const filePath = path.join(outputFolder, fileName);
@@ -338,6 +353,12 @@ const createNewOutputFile = (type, index) => {
     fileStream.pipe(outputStream);
     return { fileStream, outputStream };
 };
+
+/**
+ * 
+ * @param {Profile} profile 
+ * @returns {Profile} 
+ */
 const fillArrayWithSourceAndNormalizeFields = profile => {
     const source = profile.domain;
     profile.data.cMarketingCode &&= normalizeField(profile.data.cMarketingCode, profile.data.clubId);
