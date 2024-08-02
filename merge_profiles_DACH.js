@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { Writable } = require('stream')
+const { Writable, Transform } = require('stream')
 const path = require('path');
 const csvStream = require('csv-write-stream');
 const JSONStream = require('JSONStream');
@@ -7,11 +7,77 @@ const es = require('event-stream');
 const merge = require('lodash.merge');
 const { v4: uuidv4 } = require('uuid');
 
-const inputFolder = './input/';
-const outputFolder = './output/';
-const MAX_USERS_PER_FILE = 180000; // 180 mila utenti
-let profilesByEmail = new Map();
 
+/**
+ *    DESIGN SCHEMA OF DACH PREFERENCES CENTER 
+ * 
+ * 
+ *        /────┐                                                                     
+ *        │JSON├───┐                                                                 
+ * /────┐ │APTA│   │                                                                 
+ * │JSON│ └────/   │                                                                 
+ * │NUTR│          │                                               MAP               
+ * └────/──────────┤   ┌──────────┐   ┌──────────┐      ┌─                    ─┐     
+ *                 │   │          │   │JSONParser│      │email1 : [...profiles]│     
+ * /────┬──────────┤   │ Readable │   │ Transform│      │email2 : [...profiles]│     
+ * │JSON│          ├───►  Stream  ├───►  Stream  ├─────►│...                   │     
+ * │LOPR│ /────┐   │   │          │   │          │      │...                   │     
+ * └────/ │JSON│   │   └──────────┘   └──────────┘      └─         │          ─┘     
+ *        │MILU├───┘                                               │                 
+ *        └────/                                                   │                 
+ *               ┌─────────────────────────────────────────────────┘                 
+ *               │                                                                   
+ *               │                                                                   
+ *               │                                                                   
+ *               │                        ┌───────────────┐   ┌───────────┐    /────┐
+ *               │                        │ CsvStringifier│   │ Writable  │    │    │
+ *               │                ┌───────►   Transform   ├───►  Stream   ├────► CSV│
+ *         ┌─────▼────┐           │       │    Stream     │   │           │    │    │
+ *         │  Merge   │ 1 profile │       └───────────────┘   └───────────┘    └────/
+ *         │ Transform├───────────┤                                                  
+ *         │  Stream  │ for each  │                                                  
+ *         │          │  email    │       ┌───────────────┐   ┌───────────┐    /────┐
+ *         └──────────┘           │       │JSONStringifier│   │ Writable  │    │    │
+ *                                └───────►   Transform   ├───►  Stream   ├────►JSON│
+ *                                        │    Stream     │   │           │    │    │
+ *                                        └───────────────┘   └───────────┘    └────/
+ *                                                                                   
+ * 
+ * 
+ * 
+ */
+
+
+
+/**
+ * The folder where the files to merge are located
+ */
+const inputFolder = './input/';
+
+/**
+ * the output folder where the file with the merged profiles will be created
+ */
+const outputFolder = './output/';
+
+/**
+ * Limit of elements for the array of the output file.
+ * When the limit has exceeded a new file is created.
+ */
+const MAX_USERS_PER_FILE = 180000; // 180 mila utenti
+
+/**
+ * ```
+ * This map collect all the data from the input files
+ * WARNING : This require a large amount of memory, depending on the files
+ * ```
+ */
+const profilesByEmail = new Map();
+
+
+
+/**
+ * Specific optin for clubId
+ */
 const clubMapping = {
     "DE APTA": "optinAptamil",
     "DE MILUPA": "optinMilupa",
@@ -87,8 +153,8 @@ const createOptinPreference = (mostRecentConsent) => ({
 
 /**
  * 
- * @param {Writable} outputCsvStreamWriter 
- * @param {Writable} mergedJsonStreamWriter 
+ * @param {Transform} outputCsvStreamWriter 
+ * @param {Transform} mergedJsonStreamWriter 
  * @param {Profile} mergedProfile 
  * @param {Profile[]} originalProfiles 
  */
@@ -332,7 +398,7 @@ const optinsToEntitlementsOfDomainOptins = profile => {
 /**
  * @param {Profile} mergedProfile 
  */
-const completeMergedProfileData = (mergedProfile) => {
+const setFixedValues = (mergedProfile) => {
     if (mergedProfile.preferences?.terms?.TermsOfUse) {
         mergedProfile.preferences.terms.TermsOfUse_v2 = mergedProfile.preferences.terms.TermsOfUse;
     }
@@ -355,16 +421,20 @@ const mergeProfilesDACH = (profilesToMerge) => {
         .map(optinsToEntitlementsOfDomainOptins)
         .reduce(toOneApplyingMergeRules());
 
-    completeMergedProfileData(mergedProfile);
+    setFixedValues(mergedProfile);
 
     return mergedProfile;
 };
 
 /**
  * 
+ * @typedef {Object} ReturnValue
+ * @property {Transform} fileStream - csv or json stringifier stream
+ * @property {Writable} outputStream - the stream that write the file
+ *
  * @param {string} type 
  * @param {number} index 
- * @returns 
+ * @returns {ReturnValue}
  */
 const createNewOutputFile = (type, index) => {
     const fileName = type === 'json' ? `user-DE-merged_${index}.json` : `oldData_merged_profile.csv`;
@@ -430,17 +500,16 @@ const mergeProfiles = async () => {
         userCount++;
     }
 
-    await generateGigyaInput(mergedJsonStreamWriter, outputCsvStreamWriter);
+    await closeStreams(mergedJsonStreamWriter, outputCsvStreamWriter);
 
     console.log("All profiles have been merged and files have been written.");
 };
 
 /**
- * close the Writable streams 
- * @param {Writable} mergedStream 
+ * @param {Transform} mergedStream 
  * @param {Writable} oldDataStream 
  */
-const generateGigyaInput = async (mergedStream, oldDataStream) => {
+const closeStreams = async (mergedStream, oldDataStream) => {
     console.log('Generating gigya input array');
     await new Promise(resolve => {
         mergedStream.on('finish', resolve);
@@ -497,7 +566,7 @@ module.exports = {
     createOptinPreference,
     mergeChildren,
     mergeProfiles,
-    generateGigyaInput,
+    generateGigyaInput: closeStreams,
     readAndProcessFiles,
     mergeProfilesDACH
 };

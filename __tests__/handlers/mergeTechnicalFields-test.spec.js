@@ -66,7 +66,7 @@ describe('DACH PREF merge technical fields', () => {
             lastUpdated: '2021-02-01T00:00:00.000Z'
         }));
     });
-    test('mytest'/*'Concatenation of technical fields'*/, () => {
+    test('Concatenation of technical fields', () => {
         const Profile1 = createTestProfileFull({
             data: {
                 regSource: 'OFFLINE',
