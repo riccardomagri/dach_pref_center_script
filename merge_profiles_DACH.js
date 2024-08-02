@@ -9,7 +9,7 @@ const { v4: uuidv4 } = require('uuid');
 
 
 /**
- *    DESIGN SCHEMA OF DACH PREFERENCES CENTER 
+ *    DESIGN SCHEMA OF DACH PREFERENCES CENTER MERGE SCRIPT
  * 
  * 
  *        /────┐                                                                     
@@ -33,9 +33,9 @@ const { v4: uuidv4 } = require('uuid');
  *               │                        │ CsvStringifier│   │ Writable  │    │    │
  *               │                ┌───────►   Transform   ├───►  Stream   ├────► CSV│
  *         ┌─────▼────┐           │       │    Stream     │   │           │    │    │
- *         │  Merge   │ 1 profile │       └───────────────┘   └───────────┘    └────/
- *         │ Transform├───────────┤                                                  
- *         │  Stream  │ for each  │                                                  
+ *         │          │ 1 profile │       └───────────────┘   └───────────┘    └────/
+ *         │  Merge   ├───────────┤                                                  
+ *         │ Function │ for each  │                                                  
  *         │          │  email    │       ┌───────────────┐   ┌───────────┐    /────┐
  *         └──────────┘           │       │JSONStringifier│   │ Writable  │    │    │
  *                                └───────►   Transform   ├───►  Stream   ├────►JSON│
@@ -247,6 +247,7 @@ const concatArrays = (acc, curr, field) => {
 
 
 /**
+ * prepare profiles in order of priority for reduce function
  * @param {Profile} a 
  * @param {Profile} b 
  * @returns {number} 
@@ -262,6 +263,8 @@ const byIsLiteAndByLastUpdated = (a, b) => {
 };
 
 /**
+ * if no other rules apply on a field the reducer function
+ * overrides low priority profiles fields with the highest priority profile fields
  * @returns {(acc: Profile, curr: Profile) => Profile} - reducer function
  */
 const toOneApplyingMergeRules = () => {
@@ -415,11 +418,11 @@ const setFixedValues = (mergedProfile) => {
  */
 const mergeProfilesDACH = (profilesToMerge) => {
     let mergedProfile = profilesToMerge
-        .sort(byIsLiteAndByLastUpdated)
         .map(normalizeFields)
         .map(fillArrayWithSource)
         .map(optinsToEntitlementsOfDomainOptins)
-        .reduce(toOneApplyingMergeRules());
+        .sort(byIsLiteAndByLastUpdated)  
+        .reduce(toOneApplyingMergeRules()); 
 
     setFixedValues(mergedProfile);
 
